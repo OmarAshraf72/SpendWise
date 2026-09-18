@@ -1,0 +1,20 @@
+package com.example.spendwise.data
+
+class CategoryRepository(private val dao: CategoryDao) {
+    val categories = dao.observeCategories()
+
+    suspend fun addCustom(name: String) {
+        dao.insert(
+            CategoryEntity(
+                name = name,
+                type = CategoryType.CUSTOM,
+                iconName = "menu_book",
+                createdAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun renameCustom(id: Long, name: String) = dao.renameCustom(id, name)
+
+    suspend fun deleteCustom(id: Long) = dao.deleteCustom(id)
+}

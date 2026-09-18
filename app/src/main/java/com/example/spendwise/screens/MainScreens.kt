@@ -17,9 +17,6 @@ fun TransactionsScreen() = ScreenPlaceholder("Transactions")
 fun AnalyticsScreen() = ScreenPlaceholder("Analytics")
 
 @Composable
-fun CategoriesScreen() = ScreenPlaceholder("Categories")
-
-@Composable
 fun SettingsScreen() = ScreenPlaceholder("Settings")
 
 @Composable
