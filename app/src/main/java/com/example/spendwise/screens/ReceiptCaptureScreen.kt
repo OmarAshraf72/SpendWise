@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -30,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.example.spendwise.viewmodel.ReceiptViewModel
+import com.example.spendwise.viewmodel.ReceiptOcrState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
 
 @Composable
@@ -38,21 +41,21 @@ fun ReceiptCaptureScreen(
     onImageReady: () -> Unit
 ) {
     val context = LocalContext.current
+    val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val isProcessing = draft.ocrState == ReceiptOcrState.PROCESSING
     var pendingCameraUri by rememberSaveable { mutableStateOf<String?>(null) }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         val uri = pendingCameraUri
         if (success && uri != null) {
-            viewModel.setImage(uri)
-            onImageReady()
+            viewModel.processImage(uri, onImageReady)
         } else {
             message = "No photo was captured."
         }
     }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
-            viewModel.setImage(uri.toString())
-            onImageReady()
+            viewModel.processImage(uri.toString(), onImageReady)
         } else {
             message = "No image was selected."
         }
@@ -65,7 +68,7 @@ fun ReceiptCaptureScreen(
     ) {
         Text("Scan Receipt", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Text(
-            "Take a clear photo of your receipt or choose an existing image. You will enter the receipt details on the next screen.",
+            "Take a clear photo of your receipt or choose an existing image. SpendWise will read it on-device, then you can review every value.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -79,6 +82,7 @@ fun ReceiptCaptureScreen(
                     }
                     .onFailure { message = "The camera could not be opened." }
             },
+            enabled = !isProcessing,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Outlined.CameraAlt, contentDescription = null)
@@ -89,12 +93,21 @@ fun ReceiptCaptureScreen(
                 message = null
                 pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
+            enabled = !isProcessing,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Outlined.PhotoLibrary, contentDescription = null)
             Text("  Choose Image")
         }
         message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        if (isProcessing) {
+            CircularProgressIndicator()
+            Text(
+                "Reading receipt text…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

@@ -75,6 +75,20 @@ fun ReceiptReviewScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text("Review Receipt", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text(
+            "OCR suggestions are fully editable. Check the merchant, date, item names, prices, and choose a category for every item.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        draft.ocrMessage?.let { message ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    message,
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         ReceiptImagePreview(draft.imageUri)
         OutlinedTextField(
             value = draft.merchant,
@@ -97,8 +111,25 @@ fun ReceiptReviewScreen(
                 modifier = Modifier.fillMaxWidth().padding(18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Receipt total", style = MaterialTheme.typography.titleMedium)
+                Text("Calculated items total", style = MaterialTheme.typography.titleMedium)
                 Text(formatEgp(draft.totalMinor), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+        }
+        draft.detectedTotalMinor?.let { detectedTotal ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Detected receipt total", style = MaterialTheme.typography.titleMedium)
+                        Text(formatEgp(detectedTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (detectedTotal != draft.totalMinor) {
+                        Text(
+                            "Detected receipt total is ${formatEgp(detectedTotal)} but listed items total is ${formatEgp(draft.totalMinor)}.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
             }
         }
         Text("Receipt items", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -114,7 +145,7 @@ fun ReceiptReviewScreen(
             draft.items.forEach { item ->
                 ReceiptItemRow(
                     item = item,
-                    categoryName = categories.firstOrNull { it.id == item.categoryId }?.name ?: "Unavailable category",
+                    categoryName = categories.firstOrNull { it.id == item.categoryId }?.name ?: "Select category",
                     onEdit = {
                         editingItem = item
                         showItemEditor = true
@@ -203,7 +234,7 @@ private fun ReceiptItemRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit)) {
         Row(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
