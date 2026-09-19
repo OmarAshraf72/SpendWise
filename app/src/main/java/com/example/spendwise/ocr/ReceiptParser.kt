@@ -10,7 +10,24 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-data class ParsedReceiptItem(val name: String, val amountMinor: Long)
+enum class PriceSource { OCR_ORIGINAL, OCR_NUMERIC_RECOVERY, TOTAL_RECONCILIATION, MANUAL }
+
+data class ParsedReceiptItem(
+    val name: String,
+    val amountMinor: Long,
+    val priceSource: PriceSource = PriceSource.OCR_ORIGINAL,
+    val requiresReview: Boolean = false
+)
+
+data class PriceRecoveryTarget(
+    val itemIndex: Int,
+    val rowBoundingBox: OcrBoundingBox?,
+    val priceBoundingBox: OcrBoundingBox?,
+    val expectedColumnX: Float?,
+    val originalText: String,
+    val originalAmountMinor: Long,
+    val originalConfidence: Float?
+)
 
 enum class ReceiptTotalConsistency { NOT_AVAILABLE, MATCH, MISMATCH }
 
@@ -19,7 +36,10 @@ data class ParsedReceipt(
     val transactionDate: Long?,
     val items: List<ParsedReceiptItem>,
     val detectedTotalMinor: Long?,
-    val totalConsistency: ReceiptTotalConsistency
+    val totalConsistency: ReceiptTotalConsistency,
+    val recoveryTargets: List<PriceRecoveryTarget> = emptyList(),
+    val detectedTotalReliable: Boolean = false,
+    val hasAdjustments: Boolean = false
 )
 
 class ReceiptParser {
@@ -30,7 +50,9 @@ class ReceiptParser {
                     .thenBy { it.box?.left ?: Float.MAX_VALUE })
         )
         val rows = reconstructRows(fragments)
-        val detectedTotal = detectReceiptTotal(rows.filter(::isSummaryRow))
+        val totalCandidates = detectReceiptTotals(rows.filter(::isSummaryRow))
+        val selectedTotal = totalCandidates.maxWithOrNull(compareBy<TotalCandidate> { it.priority }.thenBy(TotalCandidate::y))
+        val detectedTotal = selectedTotal?.amountMinor
         val candidateRows = rows.filter(::canBeProductRow)
         val receiptWidth = fragments.mapNotNull { it.box?.right }.maxOrNull()
             ?.minus(fragments.mapNotNull { it.box?.left }.minOrNull() ?: 0f)
@@ -38,8 +60,8 @@ class ReceiptParser {
         val columns = inferNumericColumns(candidateRows, receiptWidth)
         val lineTotalColumn = chooseLineTotalColumn(columns, candidateRows, detectedTotal)
         val rowItems = candidateRows.mapNotNull { row -> parseProductRow(row, columns, lineTotalColumn) }
-        val items = deduplicateItems(attachWrappedNames(rowItems, rows))
-            .map { ParsedReceiptItem(it.name, it.amountMinor) }
+        val locatedItems = deduplicateItems(attachWrappedNames(rowItems, rows))
+        val items = locatedItems.map { ParsedReceiptItem(it.name, it.amountMinor) }
         val itemTotal = items.fold(0L) { total, item -> total + item.amountMinor }
         val consistency = when {
             detectedTotal == null -> ReceiptTotalConsistency.NOT_AVAILABLE
@@ -56,7 +78,20 @@ class ReceiptParser {
             transactionDate = date?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
             items = items,
             detectedTotalMinor = detectedTotal,
-            totalConsistency = consistency
+            totalConsistency = consistency,
+            recoveryTargets = locatedItems.mapIndexed { itemIndex, item ->
+                PriceRecoveryTarget(
+                    itemIndex = itemIndex,
+                    rowBoundingBox = item.box,
+                    priceBoundingBox = item.priceBox,
+                    expectedColumnX = item.expectedColumnX,
+                    originalText = item.originalPriceText,
+                    originalAmountMinor = item.amountMinor,
+                    originalConfidence = item.priceConfidence
+                )
+            },
+            detectedTotalReliable = isReliableTotal(selectedTotal, totalCandidates),
+            hasAdjustments = rows.any(::isAdjustmentRow)
         )
     }
 
@@ -111,11 +146,19 @@ class ReceiptParser {
         return overlap >= ROW_VERTICAL_OVERLAP || centerDistance <= max(row.height, candidate.height) * ROW_CENTER_TOLERANCE
     }
 
-    private fun detectReceiptTotal(summaryRows: List<LogicalRow>): Long? = summaryRows.mapNotNull { row ->
+    private fun detectReceiptTotals(summaryRows: List<LogicalRow>): List<TotalCandidate> = summaryRows.mapNotNull { row ->
         val priority = totalPriority(row) ?: return@mapNotNull null
-        val amount = row.numericCells().lastOrNull()?.amountMinor ?: return@mapNotNull null
-        TotalCandidate(priority, row.box?.centerY ?: row.index.toFloat(), amount)
-    }.maxWithOrNull(compareBy<TotalCandidate> { it.priority }.thenBy(TotalCandidate::y))?.amountMinor
+        val cell = row.numericCells().lastOrNull() ?: return@mapNotNull null
+        TotalCandidate(priority, row.box?.centerY ?: row.index.toFloat(), cell.amountMinor, cell.confidence)
+    }
+
+    private fun isReliableTotal(selected: TotalCandidate?, candidates: List<TotalCandidate>): Boolean {
+        if (selected == null) return false
+        val agreeingTotals = candidates.count { candidate ->
+            abs(candidate.amountMinor - selected.amountMinor) <= TOTAL_TOLERANCE_MINOR
+        }
+        return agreeingTotals >= 2 || (selected.priority >= 4 && (selected.confidence ?: 0f) >= RELIABLE_TOTAL_CONFIDENCE)
+    }
 
     private fun totalPriority(row: LogicalRow): Int? {
         val normalized = row.textVariants.joinToString(" ") { normalizeForKeywords(it) }
@@ -185,7 +228,16 @@ class ReceiptParser {
         val remove = (learnedCells + selected).distinctBy { Triple(it.fragmentIndex, it.range.first, it.range.last) }
         val name = buildProductName(row, remove)
         if (!isValidProductName(name)) return null
-        return RowItem(name, selected.amountMinor, row.index, row.box)
+        return RowItem(
+            name = name,
+            amountMinor = selected.amountMinor,
+            rowIndex = row.index,
+            box = row.box,
+            priceBox = selected.boundingBox,
+            expectedColumnX = lineTotalColumn?.centerX ?: selected.x,
+            originalPriceText = selected.raw,
+            priceConfidence = selected.confidence
+        )
     }
 
     private fun chooseFallbackPrice(row: LogicalRow, cells: List<NumericCell>): NumericCell? {
@@ -286,6 +338,12 @@ class ReceiptParser {
 
     private fun isSummaryRow(row: LogicalRow): Boolean = row.textVariants.any(::containsSummaryKeyword)
 
+    private fun isAdjustmentRow(row: LogicalRow): Boolean {
+        val normalized = row.textVariants.joinToString(" ") { normalizeForKeywords(it) }
+        return ADJUSTMENT_ENGLISH_REGEX.containsMatchIn(normalized) ||
+            ADJUSTMENT_ARABIC_KEYWORDS.any(normalized::contains)
+    }
+
     private fun containsSummaryKeyword(text: String): Boolean {
         val normalized = normalizeForKeywords(text)
         return SUMMARY_ENGLISH_REGEX.containsMatchIn(normalized) || SUMMARY_ARABIC_KEYWORDS.any(normalized::contains)
@@ -321,9 +379,19 @@ class ReceiptParser {
                 rowIndex = index,
                 fragmentIndex = fragmentIndex,
                 range = match.range,
-                isStrongMoney = match.isStrongMoney
+                isStrongMoney = match.isStrongMoney,
+                confidence = fragment.confidence,
+                boundingBox = numericTokenBox(fragment.box, match.range, fragment.text.length)
             )
         }
+    }
+
+    private fun numericTokenBox(box: OcrBoundingBox?, range: IntRange, textLength: Int): OcrBoundingBox? {
+        if (box == null || textLength <= 0) return box
+        val characterWidth = box.width / textLength
+        val left = box.left + range.first * characterWidth
+        val right = box.left + (range.last + 1) * characterWidth
+        return rectangle(left, box.top, right, box.bottom)
     }
 
     private fun moneyMatches(text: String): List<NumericMatch> = MONEY_TOKEN_REGEX.findAll(text).mapNotNull { match ->
@@ -438,7 +506,9 @@ class ReceiptParser {
         val rowIndex: Int,
         val fragmentIndex: Int,
         val range: IntRange,
-        val isStrongMoney: Boolean
+        val isStrongMoney: Boolean,
+        val confidence: Float?,
+        val boundingBox: OcrBoundingBox?
     )
 
     private data class NumericColumn(val centerX: Float, val cells: List<NumericCell>, val support: Int) {
@@ -452,8 +522,22 @@ class ReceiptParser {
             ?.takeIf { abs(checkNotNull(it.x) - centerX) <= matchTolerance }
     }
 
-    private data class RowItem(val name: String, val amountMinor: Long, val rowIndex: Int, val box: OcrBoundingBox?)
-    private data class TotalCandidate(val priority: Int, val y: Float, val amountMinor: Long)
+    private data class RowItem(
+        val name: String,
+        val amountMinor: Long,
+        val rowIndex: Int,
+        val box: OcrBoundingBox?,
+        val priceBox: OcrBoundingBox?,
+        val expectedColumnX: Float?,
+        val originalPriceText: String,
+        val priceConfidence: Float?
+    )
+    private data class TotalCandidate(
+        val priority: Int,
+        val y: Float,
+        val amountMinor: Long,
+        val confidence: Float?
+    )
 
     private companion object {
         const val MIN_CONFIDENCE = 0.35f
@@ -467,6 +551,7 @@ class ReceiptParser {
         const val MAX_WRAPPED_LINES = 2
         const val MAX_PRODUCT_NAME_LENGTH = 120
         const val TOTAL_TOLERANCE_MINOR = 2L
+        const val RELIABLE_TOTAL_CONFIDENCE = 0.82f
         val OcrBoundingBox.height get() = (bottom - top).coerceAtLeast(1f)
         val OcrBoundingBox.width get() = (right - left).coerceAtLeast(1f)
         val LETTER_REGEX = Regex("[A-Za-z\\p{IsArabic}]")
@@ -480,6 +565,10 @@ class ReceiptParser {
         )
         val SUMMARY_ARABIC_KEYWORDS = listOf(
             "الاجمالي", "اجمالي", "الصافي", "الصافي المطلوب", "المطلوب", "اجمالي المطلوب",
+            "الخصم", "الضريبة", "الضريبه", "القيمة المضافة", "القيمه المضافه", "نقدي", "الباقي"
+        )
+        val ADJUSTMENT_ENGLISH_REGEX = Regex("(?i)(?:^|[^a-z])(?:cash|change|tax|vat|discount)(?:$|[^a-z])")
+        val ADJUSTMENT_ARABIC_KEYWORDS = listOf(
             "الخصم", "الضريبة", "الضريبه", "القيمة المضافة", "القيمه المضافه", "نقدي", "الباقي"
         )
         val REQUIRED_TOTAL_KEYWORDS = listOf("grand total", "amount due", "total due", "net required", "الصافي المطلوب", "اجمالي المطلوب", "المطلوب")

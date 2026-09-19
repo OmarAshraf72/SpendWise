@@ -6,6 +6,14 @@ interface OcrEngine {
     suspend fun recognize(imageUri: Uri): OcrResult
 }
 
+interface NumericOcrEngine {
+    suspend fun recognizeNumericCrops(
+        imageUri: Uri,
+        sourceResult: OcrResult,
+        targets: List<PriceRecoveryTarget>
+    ): List<NumericOcrCandidate>
+}
+
 data class OcrPoint(val x: Float, val y: Float)
 
 data class OcrBoundingBox(val points: List<OcrPoint>) {
@@ -24,5 +32,15 @@ data class OcrLine(
 
 data class OcrResult(
     val lines: List<OcrLine>,
-    val fullText: String = lines.joinToString("\n") { it.text }
+    val fullText: String = lines.joinToString("\n") { it.text },
+    val imageWidth: Int? = null,
+    val imageHeight: Int? = null
+)
+
+data class NumericOcrCandidate(
+    val itemIndex: Int,
+    val text: String,
+    val confidence: Float,
+    val preprocessing: String,
+    val boundingBox: OcrBoundingBox
 )

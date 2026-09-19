@@ -19,7 +19,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class PaddleOcrEngine(private val context: Context) : OcrEngine {
+class PaddleOcrEngine(private val context: Context) : OcrEngine, NumericOcrEngine {
     private val inferenceMutex = Mutex()
     private var detector: PaddlePredictor? = null
     private var recognizer: PaddlePredictor? = null
@@ -28,7 +28,7 @@ class PaddleOcrEngine(private val context: Context) : OcrEngine {
     override suspend fun recognize(imageUri: Uri): OcrResult = withContext(Dispatchers.Default) {
         inferenceMutex.withLock {
             ensureLoaded()
-            val original = decodeBitmap(imageUri)
+            val original = decodeBitmap(imageUri, MAX_IMAGE_SIDE)
                 ?: throw IllegalArgumentException("Receipt image could not be decoded")
             try {
                 val boxes = detectText(original)
@@ -36,7 +36,63 @@ class PaddleOcrEngine(private val context: Context) : OcrEngine {
                     .filter { it.text.isNotBlank() }
                     .sortedWith(compareBy<OcrLine> { it.boundingBox?.top ?: 0f }
                         .thenBy { it.boundingBox?.left ?: 0f })
-                OcrResult(lines)
+                OcrResult(lines, imageWidth = original.width, imageHeight = original.height)
+            } finally {
+                original.recycle()
+            }
+        }
+    }
+
+    override suspend fun recognizeNumericCrops(
+        imageUri: Uri,
+        sourceResult: OcrResult,
+        targets: List<PriceRecoveryTarget>
+    ): List<NumericOcrCandidate> = withContext(Dispatchers.Default) {
+        inferenceMutex.withLock {
+            ensureLoaded()
+            val original = decodeBitmap(imageUri, maxSide = null)
+                ?: throw IllegalArgumentException("Receipt image could not be decoded")
+            try {
+                val sourceWidth = sourceResult.imageWidth?.coerceAtLeast(1) ?: original.width
+                val sourceHeight = sourceResult.imageHeight?.coerceAtLeast(1) ?: original.height
+                val scaleX = original.width.toFloat() / sourceWidth
+                val scaleY = original.height.toFloat() / sourceHeight
+                buildList {
+                    targets.forEach targetLoop@ { target ->
+                        val sourceBox = recoveryBox(target) ?: return@targetLoop
+                        val cropBox = sourceBox.scaledToPixels(scaleX, scaleY, original.width, original.height)
+                        val crop = Bitmap.createBitmap(
+                            original,
+                            cropBox.left,
+                            cropBox.top,
+                            (cropBox.right - cropBox.left).coerceAtLeast(1),
+                            (cropBox.bottom - cropBox.top).coerceAtLeast(1)
+                        )
+                        try {
+                            numericVariants(crop).forEach variantLoop@ { variant ->
+                                try {
+                                    val line = recognizeBox(
+                                        variant.bitmap,
+                                        PixelBox(0, 0, variant.bitmap.width, variant.bitmap.height)
+                                    ) ?: return@variantLoop
+                                    add(
+                                        NumericOcrCandidate(
+                                            itemIndex = target.itemIndex,
+                                            text = line.text,
+                                            confidence = line.confidence ?: 0f,
+                                            preprocessing = variant.name,
+                                            boundingBox = target.priceBoundingBox ?: sourceBox
+                                        )
+                                    )
+                                } finally {
+                                    variant.bitmap.recycle()
+                                }
+                            }
+                        } finally {
+                            crop.recycle()
+                        }
+                    }
+                }
             } finally {
                 original.recycle()
             }
@@ -84,15 +140,15 @@ class PaddleOcrEngine(private val context: Context) : OcrEngine {
         return destination
     }
 
-    private fun decodeBitmap(uri: Uri): Bitmap? {
+    private fun decodeBitmap(uri: Uri, maxSide: Int?): Bitmap? {
         val decoded = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val source = ImageDecoder.createSource(context.contentResolver, uri)
             ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 val width = info.size.width
                 val height = info.size.height
-                val scale = min(1f, MAX_IMAGE_SIDE.toFloat() / max(width, height))
-                if (scale < 1f) {
+                val scale = maxSide?.let { min(1f, it.toFloat() / max(width, height)) } ?: 1f
+                if (maxSide != null && scale < 1f) {
                     decoder.setTargetSize((width * scale).roundToInt(), (height * scale).roundToInt())
                 }
             }
@@ -103,6 +159,143 @@ class PaddleOcrEngine(private val context: Context) : OcrEngine {
             if (it !== decoded) decoded.recycle()
         }
     }
+
+    private fun recoveryBox(target: PriceRecoveryTarget): OcrBoundingBox? {
+        val row = target.rowBoundingBox
+        val price = target.priceBoundingBox
+        if (price != null) {
+            val rowHeight = row?.let { (it.bottom - it.top).coerceAtLeast(1f) }
+                ?: (price.bottom - price.top).coerceAtLeast(1f)
+            val horizontalPadding = rowHeight * 0.8f
+            val verticalPadding = rowHeight * 0.35f
+            return rectangle(
+                price.left - horizontalPadding,
+                price.top - verticalPadding,
+                price.right + horizontalPadding,
+                price.bottom + verticalPadding
+            )
+        }
+        if (row != null && target.expectedColumnX != null) {
+            val rowHeight = (row.bottom - row.top).coerceAtLeast(1f)
+            return rectangle(
+                target.expectedColumnX - rowHeight * 2.8f,
+                row.top - rowHeight * 0.25f,
+                target.expectedColumnX + rowHeight * 2.8f,
+                row.bottom + rowHeight * 0.25f
+            )
+        }
+        return null
+    }
+
+    private fun OcrBoundingBox.scaledToPixels(
+        scaleX: Float,
+        scaleY: Float,
+        width: Int,
+        height: Int
+    ): PixelBox {
+        val left = (this.left * scaleX).roundToInt().coerceIn(0, width - 1)
+        val top = (this.top * scaleY).roundToInt().coerceIn(0, height - 1)
+        val right = (this.right * scaleX).roundToInt().coerceIn(left + 1, width)
+        val bottom = (this.bottom * scaleY).roundToInt().coerceIn(top + 1, height)
+        return PixelBox(left, top, right, bottom)
+    }
+
+    private fun numericVariants(crop: Bitmap): List<PreprocessedBitmap> = listOf(
+        PreprocessedBitmap("grayscale_3x", upscale(toGrayscale(crop), 3)),
+        PreprocessedBitmap("contrast_3x", upscale(normalizeContrast(crop), 3)),
+        PreprocessedBitmap("sharpened_3x", upscale(sharpen(crop), 3)),
+        PreprocessedBitmap("adaptive_threshold_4x", upscale(adaptiveThreshold(crop), 4))
+    )
+
+    private fun upscale(bitmap: Bitmap, factor: Int): Bitmap {
+        val scaled = Bitmap.createScaledBitmap(bitmap, bitmap.width * factor, bitmap.height * factor, true)
+        if (scaled !== bitmap) bitmap.recycle()
+        return scaled
+    }
+
+    private fun toGrayscale(source: Bitmap): Bitmap = transformGrayscale(source) { value, _, _ -> value }
+
+    private fun normalizeContrast(source: Bitmap): Bitmap {
+        val grayscale = grayscaleValues(source)
+        val low = grayscale.minOrNull() ?: 0
+        val high = grayscale.maxOrNull() ?: 255
+        val range = (high - low).coerceAtLeast(1)
+        return bitmapFromGray(source.width, source.height, IntArray(grayscale.size) { index ->
+            ((grayscale[index] - low) * 255 / range).coerceIn(0, 255)
+        })
+    }
+
+    private fun sharpen(source: Bitmap): Bitmap {
+        val width = source.width
+        val height = source.height
+        val input = grayscaleValues(source)
+        val output = input.copyOf()
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                val index = y * width + x
+                output[index] = (input[index] * 5 - input[index - 1] - input[index + 1] -
+                    input[index - width] - input[index + width]).coerceIn(0, 255)
+            }
+        }
+        return bitmapFromGray(width, height, output)
+    }
+
+    private fun adaptiveThreshold(source: Bitmap): Bitmap {
+        val width = source.width
+        val height = source.height
+        val input = grayscaleValues(source)
+        val integral = LongArray((width + 1) * (height + 1))
+        for (y in 1..height) {
+            var rowSum = 0L
+            for (x in 1..width) {
+                rowSum += input[(y - 1) * width + x - 1]
+                integral[y * (width + 1) + x] = integral[(y - 1) * (width + 1) + x] + rowSum
+            }
+        }
+        val radius = max(4, min(width, height) / 8)
+        val output = IntArray(input.size)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val left = (x - radius).coerceAtLeast(0)
+                val top = (y - radius).coerceAtLeast(0)
+                val right = (x + radius + 1).coerceAtMost(width)
+                val bottom = (y + radius + 1).coerceAtMost(height)
+                val sum = integral[bottom * (width + 1) + right] - integral[top * (width + 1) + right] -
+                    integral[bottom * (width + 1) + left] + integral[top * (width + 1) + left]
+                val mean = sum / ((right - left) * (bottom - top)).coerceAtLeast(1)
+                output[y * width + x] = if (input[y * width + x] < mean - 8) 0 else 255
+            }
+        }
+        return bitmapFromGray(width, height, output)
+    }
+
+    private fun transformGrayscale(source: Bitmap, transform: (Int, Int, Int) -> Int): Bitmap {
+        val values = grayscaleValues(source)
+        return bitmapFromGray(source.width, source.height, IntArray(values.size) { index ->
+            transform(values[index], index % source.width, index / source.width).coerceIn(0, 255)
+        })
+    }
+
+    private fun grayscaleValues(source: Bitmap): IntArray {
+        val pixels = IntArray(source.width * source.height)
+        source.getPixels(pixels, 0, source.width, 0, 0, source.width, source.height)
+        return IntArray(pixels.size) { index ->
+            val color = pixels[index]
+            (((color shr 16 and 0xFF) * 299 + (color shr 8 and 0xFF) * 587 + (color and 0xFF) * 114) / 1000)
+        }
+    }
+
+    private fun bitmapFromGray(width: Int, height: Int, values: IntArray): Bitmap {
+        val colors = IntArray(values.size) { index ->
+            val value = values[index].coerceIn(0, 255)
+            (0xFF shl 24) or (value shl 16) or (value shl 8) or value
+        }
+        return Bitmap.createBitmap(colors, width, height, Bitmap.Config.ARGB_8888)
+    }
+
+    private fun rectangle(left: Float, top: Float, right: Float, bottom: Float) = OcrBoundingBox(
+        listOf(OcrPoint(left, top), OcrPoint(right, top), OcrPoint(right, bottom), OcrPoint(left, bottom))
+    )
 
     private fun detectText(original: Bitmap): List<PixelBox> {
         val scale = min(1f, DETECTOR_MAX_SIDE.toFloat() / max(original.width, original.height))
@@ -310,6 +503,8 @@ class PaddleOcrEngine(private val context: Context) : OcrEngine {
             )
         )
     }
+
+    private data class PreprocessedBitmap(val name: String, val bitmap: Bitmap)
 
     private companion object {
         const val MAX_IMAGE_SIDE = 1800

@@ -1,6 +1,7 @@
 package com.example.spendwise.screens
 
 import android.net.Uri
+import android.content.pm.ApplicationInfo
 import android.widget.ImageView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -48,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.spendwise.data.CategoryEntity
 import com.example.spendwise.data.formatEgp
 import com.example.spendwise.data.parseEgpToMinor
+import com.example.spendwise.suggestion.CategorySuggestionSource
 import com.example.spendwise.viewmodel.ReceiptItemDraft
 import com.example.spendwise.viewmodel.ReceiptSaveState
 import com.example.spendwise.viewmodel.ReceiptViewModel
@@ -70,6 +74,9 @@ fun ReceiptReviewScreen(
     var editingItem by remember { mutableStateOf<ReceiptItemDraft?>(null) }
     var showItemEditor by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showOcrDebug by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val isDebugBuild = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -88,6 +95,24 @@ fun ReceiptReviewScreen(
                     modifier = Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+        if (isDebugBuild && draft.ocrDebugDetails != null) {
+            OutlinedButton(
+                onClick = { showOcrDebug = !showOcrDebug },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (showOcrDebug) "Hide OCR debug details" else "Show OCR debug details")
+            }
+            if (showOcrDebug) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = draft.ocrDebugDetails.orEmpty(),
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
             }
         }
         ReceiptImagePreview(draft.imageUri)
@@ -240,7 +265,21 @@ private fun ReceiptItemRow(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(categoryName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (item.categorySuggestion?.source == CategorySuggestionSource.USER_LEARNED) {
+                    Text(
+                        "Suggested from previous choices",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(formatEgp(item.amountMinor), style = MaterialTheme.typography.bodyLarge)
+                if (item.requiresPriceReview) {
+                    Text(
+                        "Price recovered — please verify",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
             IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, contentDescription = "Edit ${item.name}") }
             IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, contentDescription = "Delete ${item.name}") }
