@@ -55,6 +55,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 
 private val receiptDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
@@ -122,9 +123,9 @@ fun ReceiptReviewScreen(
                         Text("Detected receipt total", style = MaterialTheme.typography.titleMedium)
                         Text(formatEgp(detectedTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
-                    if (detectedTotal != draft.totalMinor) {
+                    if (abs(detectedTotal - draft.totalMinor) > 2L) {
                         Text(
-                            "Detected receipt total is ${formatEgp(detectedTotal)} but listed items total is ${formatEgp(draft.totalMinor)}.",
+                            "Detected receipt total is ${formatEgp(detectedTotal)} but listed items total is ${formatEgp(draft.totalMinor)}. Review the receipt items before saving.",
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyMedium
                         )
