@@ -3,6 +3,8 @@ package com.example.spendwise.data
 class CategoryRepository(private val dao: CategoryDao) {
     val categories = dao.observeCategories()
 
+    suspend fun getActiveCategories(): List<CategoryEntity> = dao.getActiveCategories()
+
     suspend fun addCustom(name: String) {
         dao.insert(
             CategoryEntity(

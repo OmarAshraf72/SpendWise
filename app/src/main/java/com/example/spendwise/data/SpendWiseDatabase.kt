@@ -8,11 +8,16 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CategoryEntity::class, TransactionEntity::class], version = 4, exportSchema = true)
+@Database(
+    entities = [CategoryEntity::class, TransactionEntity::class, ItemCategoryMappingEntity::class],
+    version = 5,
+    exportSchema = true
+)
 @TypeConverters(CategoryTypeConverter::class, TransactionConverters::class)
 abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun transactionDao(): TransactionDao
+    abstract fun itemCategoryMappingDao(): ItemCategoryMappingDao
 
     companion object {
         @Volatile private var instance: SpendWiseDatabase? = null
@@ -22,7 +27,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 context.applicationContext,
                 SpendWiseDatabase::class.java,
                 "spendwise.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).addCallback(object : Callback() {
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
                     val createdAt = System.currentTimeMillis()
@@ -119,6 +124,37 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_transactions_receiptGroupId " +
                         "ON transactions (receiptGroupId)"
+                )
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS item_category_mappings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        normalizedItemName TEXT NOT NULL,
+                        normalizedMerchant TEXT,
+                        categoryId INTEGER NOT NULL,
+                        confirmationCount INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS index_item_category_mappings_normalizedItemName_normalizedMerchant
+                    ON item_category_mappings (normalizedItemName, normalizedMerchant)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_item_category_mappings_categoryId
+                    ON item_category_mappings (categoryId)
+                    """.trimIndent()
                 )
             }
         }
