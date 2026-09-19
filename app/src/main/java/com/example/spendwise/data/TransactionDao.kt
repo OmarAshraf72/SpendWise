@@ -43,4 +43,7 @@ interface TransactionDao {
 
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long
+
+    @Insert
+    suspend fun insertAll(transactions: List<TransactionEntity>): List<Long>
 }

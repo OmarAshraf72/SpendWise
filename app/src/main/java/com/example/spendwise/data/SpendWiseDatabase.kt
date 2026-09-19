@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CategoryEntity::class, TransactionEntity::class], version = 3, exportSchema = true)
+@Database(entities = [CategoryEntity::class, TransactionEntity::class], version = 4, exportSchema = true)
 @TypeConverters(CategoryTypeConverter::class, TransactionConverters::class)
 abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
@@ -22,7 +22,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 context.applicationContext,
                 SpendWiseDatabase::class.java,
                 "spendwise.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).addCallback(object : Callback() {
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
                     val createdAt = System.currentTimeMillis()
@@ -110,6 +110,16 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE transactions_new RENAME TO transactions")
                 db.execSQL("CREATE INDEX index_transactions_categoryId ON transactions (categoryId)")
                 db.execSQL("CREATE INDEX index_transactions_transactionDate ON transactions (transactionDate)")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE transactions ADD COLUMN receiptGroupId TEXT")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_transactions_receiptGroupId " +
+                        "ON transactions (receiptGroupId)"
+                )
             }
         }
     }

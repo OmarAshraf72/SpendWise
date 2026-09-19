@@ -22,7 +22,7 @@ enum class TransactionSource { MANUAL, RECEIPT, BANK_NOTIFICATION, SMS }
             onDelete = ForeignKey.NO_ACTION
         )
     ],
-    indices = [Index("categoryId"), Index("transactionDate")]
+    indices = [Index("categoryId"), Index("transactionDate"), Index("receiptGroupId")]
 )
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -33,7 +33,8 @@ data class TransactionEntity(
     val note: String?,
     val transactionDate: Long,
     val source: TransactionSource,
-    val createdAt: Long
+    val createdAt: Long,
+    val receiptGroupId: String? = null
 )
 
 data class TransactionWithCategory(

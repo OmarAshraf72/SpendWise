@@ -32,6 +32,7 @@ import com.example.spendwise.viewmodel.HomeViewModel
 fun HomeScreen(
     onAddExpense: () -> Unit,
     onAddIncome: () -> Unit,
+    onScanReceipt: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,7 +60,7 @@ fun HomeScreen(
         SummaryCard(uiState)
         SpendingBreakdown(uiState.categorySpending)
         InsightCard(uiState.insight)
-        QuickActions(onAddExpense, onAddIncome)
+        QuickActions(onAddExpense, onAddIncome, onScanReceipt)
     }
 }
 
@@ -201,7 +202,11 @@ private fun InsightCard(insight: String) {
 }
 
 @Composable
-private fun QuickActions(onAddExpense: () -> Unit, onAddIncome: () -> Unit) {
+private fun QuickActions(
+    onAddExpense: () -> Unit,
+    onAddIncome: () -> Unit,
+    onScanReceipt: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Quick actions",
@@ -211,7 +216,7 @@ private fun QuickActions(onAddExpense: () -> Unit, onAddIncome: () -> Unit) {
         Button(onClick = onAddExpense, modifier = Modifier.fillMaxWidth()) {
             Text("Add Expense")
         }
-        OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onScanReceipt, modifier = Modifier.fillMaxWidth()) {
             Text("Scan Receipt")
         }
         TextButton(onClick = onAddIncome, modifier = Modifier.fillMaxWidth()) {

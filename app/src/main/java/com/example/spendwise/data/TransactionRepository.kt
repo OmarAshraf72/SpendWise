@@ -25,7 +25,8 @@ class TransactionRepository(private val dao: TransactionDao) {
                 note = note?.takeIf { it.isNotBlank() },
                 transactionDate = transactionDate,
                 source = TransactionSource.MANUAL,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                receiptGroupId = null
             )
         )
     }
@@ -45,8 +46,39 @@ class TransactionRepository(private val dao: TransactionDao) {
                 note = note?.takeIf { it.isNotBlank() },
                 transactionDate = transactionDate,
                 source = TransactionSource.MANUAL,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                receiptGroupId = null
             )
         )
     }
+
+    suspend fun addReceiptExpenses(
+        items: List<ReceiptExpenseItem>,
+        merchant: String?,
+        transactionDate: Long,
+        receiptGroupId: String
+    ) {
+        val createdAt = System.currentTimeMillis()
+        dao.insertAll(
+            items.mapIndexed { index, item ->
+                TransactionEntity(
+                    type = TransactionType.EXPENSE,
+                    amountMinor = item.amountMinor,
+                    categoryId = item.categoryId,
+                    merchant = merchant?.takeIf { it.isNotBlank() },
+                    note = item.name,
+                    transactionDate = transactionDate,
+                    source = TransactionSource.RECEIPT,
+                    createdAt = createdAt + index,
+                    receiptGroupId = receiptGroupId
+                )
+            }
+        )
+    }
 }
+
+data class ReceiptExpenseItem(
+    val name: String,
+    val amountMinor: Long,
+    val categoryId: Long
+)
