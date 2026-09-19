@@ -5,12 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [CategoryEntity::class], version = 1, exportSchema = true)
-@TypeConverters(CategoryTypeConverter::class)
+@Database(entities = [CategoryEntity::class, TransactionEntity::class], version = 3, exportSchema = true)
+@TypeConverters(CategoryTypeConverter::class, TransactionConverters::class)
 abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
+    abstract fun transactionDao(): TransactionDao
 
     companion object {
         @Volatile private var instance: SpendWiseDatabase? = null
@@ -20,7 +22,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 context.applicationContext,
                 SpendWiseDatabase::class.java,
                 "spendwise.db"
-            ).addCallback(object : Callback() {
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
                     val createdAt = System.currentTimeMillis()
@@ -47,5 +49,68 @@ abstract class SpendWiseDatabase : RoomDatabase() {
             "Personal Care" to "face",
             "Other" to "category"
         )
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        categoryId INTEGER,
+                        merchant TEXT,
+                        note TEXT,
+                        transactionDate INTEGER NOT NULL,
+                        source TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_categoryId ON transactions (categoryId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_transactionDate ON transactions (transactionDate)")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE categories ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE transactions_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        amountMinor INTEGER NOT NULL,
+                        categoryId INTEGER,
+                        merchant TEXT,
+                        note TEXT,
+                        transactionDate INTEGER NOT NULL,
+                        source TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO transactions_new (
+                        id, type, amountMinor, categoryId, merchant, note,
+                        transactionDate, source, createdAt
+                    )
+                    SELECT
+                        id, type, CAST(ROUND(amount * 100.0) AS INTEGER), categoryId,
+                        merchant, note, transactionDate, source, createdAt
+                    FROM transactions
+                    """.trimIndent()
+                )
+                db.execSQL("DROP TABLE transactions")
+                db.execSQL("ALTER TABLE transactions_new RENAME TO transactions")
+                db.execSQL("CREATE INDEX index_transactions_categoryId ON transactions (categoryId)")
+                db.execSQL("CREATE INDEX index_transactions_transactionDate ON transactions (transactionDate)")
+            }
+        }
     }
 }

@@ -16,6 +16,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.spendwise.navigation.MainDestination
 import com.example.spendwise.screens.AnalyticsScreen
+import com.example.spendwise.screens.AddExpenseScreen
 import com.example.spendwise.screens.CategoriesScreen
 import com.example.spendwise.screens.HomeScreen
 import com.example.spendwise.screens.SettingsScreen
@@ -27,25 +28,29 @@ fun SpendWiseApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    val addExpenseRoute = "add_expense"
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
-                MainDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentRoute == destination.route,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (currentRoute != addExpenseRoute) {
+                NavigationBar {
+                    MainDestination.entries.forEach { destination ->
+                        NavigationBarItem(
+                            selected = currentRoute == destination.route,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Text(destination.symbol) },
-                        label = { Text(destination.title) }
-                    )
+                            },
+                            icon = { Text(destination.symbol) },
+                            label = { Text(destination.title) }
+                        )
+                    }
                 }
             }
         }
@@ -55,11 +60,18 @@ fun SpendWiseApp() {
             startDestination = MainDestination.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(MainDestination.Home.route) { HomeScreen() }
-            composable(MainDestination.Transactions.route) { TransactionsScreen() }
+            composable(MainDestination.Home.route) {
+                HomeScreen(onAddExpense = { navController.navigate(addExpenseRoute) })
+            }
+            composable(MainDestination.Transactions.route) {
+                TransactionsScreen(onAddExpense = { navController.navigate(addExpenseRoute) })
+            }
             composable(MainDestination.Analytics.route) { AnalyticsScreen() }
             composable(MainDestination.Categories.route) { CategoriesScreen() }
             composable(MainDestination.Settings.route) { SettingsScreen() }
+            composable(addExpenseRoute) {
+                AddExpenseScreen(onSaved = { navController.popBackStack() })
+            }
         }
     }
 }

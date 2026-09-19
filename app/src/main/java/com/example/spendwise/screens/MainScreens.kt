@@ -11,9 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun TransactionsScreen() = ScreenPlaceholder("Transactions")
-
-@Composable
 fun AnalyticsScreen() = ScreenPlaceholder("Analytics")
 
 @Composable

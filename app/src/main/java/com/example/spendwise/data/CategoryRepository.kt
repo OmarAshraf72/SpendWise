@@ -16,5 +16,5 @@ class CategoryRepository(private val dao: CategoryDao) {
 
     suspend fun renameCustom(id: Long, name: String) = dao.renameCustom(id, name)
 
-    suspend fun deleteCustom(id: Long) = dao.deleteCustom(id)
+    suspend fun archiveCustom(id: Long) = dao.archiveCustom(id)
 }

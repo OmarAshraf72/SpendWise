@@ -26,7 +26,7 @@ class CategoriesViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch { repository.renameCustom(id, name.trim()) }
     }
 
-    fun deleteCustom(id: Long) {
-        viewModelScope.launch { repository.deleteCustom(id) }
+    fun archiveCustom(id: Long) {
+        viewModelScope.launch { repository.archiveCustom(id) }
     }
 }

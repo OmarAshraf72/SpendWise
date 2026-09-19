@@ -148,7 +148,7 @@ fun CategoriesScreen(viewModel: CategoriesViewModel = viewModel()) {
             text = { Text("Delete ${category.name} from your custom categories?") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deleteCustom(category.id)
+                    viewModel.archiveCustom(category.id)
                     deletingCategory = null
                 }) { Text("Delete") }
             },

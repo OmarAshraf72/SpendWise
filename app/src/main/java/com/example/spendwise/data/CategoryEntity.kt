@@ -1,6 +1,7 @@
 package com.example.spendwise.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 
@@ -12,7 +13,8 @@ data class CategoryEntity(
     val name: String,
     val type: CategoryType,
     val iconName: String,
-    val createdAt: Long
+    val createdAt: Long,
+    @ColumnInfo(defaultValue = "0") val isArchived: Boolean = false
 )
 
 class CategoryTypeConverter {
