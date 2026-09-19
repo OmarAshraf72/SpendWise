@@ -3,6 +3,7 @@ package com.example.spendwise.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,17 +15,22 @@ import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.spendwise.data.TransactionType
 import com.example.spendwise.data.TransactionWithCategory
 import com.example.spendwise.data.formatEgp
 import com.example.spendwise.viewmodel.TransactionsViewModel
@@ -33,6 +39,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 private val transactionDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
+private enum class TransactionFilter(val label: String) { ALL("All"), EXPENSES("Expenses"), INCOME("Income") }
 
 @Composable
 fun TransactionsScreen(
@@ -40,30 +47,44 @@ fun TransactionsScreen(
     viewModel: TransactionsViewModel = viewModel()
 ) {
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
+    var filter by rememberSaveable { mutableStateOf(TransactionFilter.ALL) }
+    val filteredTransactions = transactions.filter { item ->
+        when (filter) {
+            TransactionFilter.ALL -> true
+            TransactionFilter.EXPENSES -> item.transaction.type == TransactionType.EXPENSE
+            TransactionFilter.INCOME -> item.transaction.type == TransactionType.INCOME
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (transactions.isEmpty()) {
-            EmptyTransactions(modifier = Modifier.align(Alignment.Center))
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = 24.dp,
-                    bottom = 104.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text(
-                        text = "Transactions",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 104.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text(
+                    text = "Transactions",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TransactionFilter.entries.forEach { option ->
+                        FilterChip(
+                            selected = filter == option,
+                            onClick = { filter = option },
+                            label = { Text(option.label) }
+                        )
+                    }
                 }
-                items(transactions, key = { it.transaction.id }) { item ->
+            }
+            if (filteredTransactions.isEmpty()) {
+                item { EmptyTransactions(filter) }
+            } else {
+                items(filteredTransactions, key = { it.transaction.id }) { item ->
                     TransactionRow(item)
                 }
             }
@@ -79,16 +100,27 @@ fun TransactionsScreen(
 }
 
 @Composable
-private fun EmptyTransactions(modifier: Modifier = Modifier) {
+private fun EmptyTransactions(filter: TransactionFilter) {
     Column(
-        modifier = modifier.padding(32.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp, horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(Icons.AutoMirrored.Outlined.ReceiptLong, contentDescription = null)
-        Text("Transactions", style = MaterialTheme.typography.headlineSmall)
         Text(
-            text = "No expenses yet. Add your first expense to see it here.",
+            text = when (filter) {
+                TransactionFilter.ALL -> "No transactions yet"
+                TransactionFilter.EXPENSES -> "No expense transactions"
+                TransactionFilter.INCOME -> "No income transactions"
+            },
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = if (filter == TransactionFilter.INCOME) {
+                "Income added from Home will appear here."
+            } else {
+                "Add an expense to start tracking your spending."
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -98,6 +130,8 @@ private fun EmptyTransactions(modifier: Modifier = Modifier) {
 @Composable
 private fun TransactionRow(item: TransactionWithCategory) {
     val transaction = item.transaction
+    val isIncome = transaction.type == TransactionType.INCOME
+    val title = if (isIncome) transaction.merchant ?: "Income" else item.category?.name ?: "Uncategorized"
     val date = Instant.ofEpochMilli(transaction.transactionDate)
         .atZone(ZoneOffset.UTC)
         .toLocalDate()
@@ -112,20 +146,23 @@ private fun TransactionRow(item: TransactionWithCategory) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (isIncome) "Income" else "Expense",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Text(
-                    text = item.category?.name ?: "Deleted category",
+                    text = (if (isIncome) "+" else "-") + formatEgp(transaction.amountMinor),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = formatEgp(transaction.amountMinor),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.error,
+                    color = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            transaction.merchant?.let {
-                Text(text = it, style = MaterialTheme.typography.bodyMedium)
+            if (!isIncome) {
+                transaction.merchant?.let { Text(text = it, style = MaterialTheme.typography.bodyMedium) }
             }
             Text(
                 text = date,

@@ -15,6 +15,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import com.example.spendwise.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     onAddExpense: () -> Unit,
+    onAddIncome: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,7 +59,7 @@ fun HomeScreen(
         SummaryCard(uiState)
         SpendingBreakdown(uiState.categorySpending)
         InsightCard(uiState.insight)
-        QuickActions(onAddExpense)
+        QuickActions(onAddExpense, onAddIncome)
     }
 }
 
@@ -71,22 +73,50 @@ private fun SummaryCard(uiState: HomeUiState) {
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Spent this month",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = formatEgp(uiState.totalSpentMinor),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Monthly summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            SummaryLine("Income", formatEgp(uiState.totalIncomeMinor))
+            SummaryLine("Spent", formatEgp(uiState.totalSpentMinor))
+            SummaryLine("Remaining", formatEgp(uiState.remainingMinor), emphasized = true)
             Text(
                 text = transactionCountLabel(uiState.transactionCount),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
+            val percentage = uiState.incomeSpentPercentageTenths
+            if (percentage == null) {
+                Text(
+                    text = "Add income to see how much of your monthly income has been spent.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                Text(
+                    text = "${formatPercentage(percentage)} of income spent",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                LinearProgressIndicator(
+                    progress = { percentage.coerceIn(0, 1_000) / 1_000f },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun SummaryLine(label: String, amount: String, emphasized: Boolean = false) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge
+        )
+        Text(
+            text = amount,
+            style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -171,7 +201,7 @@ private fun InsightCard(insight: String) {
 }
 
 @Composable
-private fun QuickActions(onAddExpense: () -> Unit) {
+private fun QuickActions(onAddExpense: () -> Unit, onAddIncome: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Quick actions",
@@ -183,6 +213,9 @@ private fun QuickActions(onAddExpense: () -> Unit) {
         }
         OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
             Text("Scan Receipt")
+        }
+        TextButton(onClick = onAddIncome, modifier = Modifier.fillMaxWidth()) {
+            Text("Add Income")
         }
     }
 }

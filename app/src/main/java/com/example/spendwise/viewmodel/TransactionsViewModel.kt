@@ -46,4 +46,22 @@ class TransactionsViewModel(application: Application) : AndroidViewModel(applica
             onSaved()
         }
     }
+
+    fun addManualIncome(
+        amountMinor: Long,
+        name: String?,
+        note: String?,
+        transactionDate: Long,
+        onSaved: () -> Unit
+    ) {
+        viewModelScope.launch {
+            transactionRepository.addManualIncome(
+                amountMinor = amountMinor,
+                name = name,
+                note = note,
+                transactionDate = transactionDate
+            )
+            onSaved()
+        }
+    }
 }

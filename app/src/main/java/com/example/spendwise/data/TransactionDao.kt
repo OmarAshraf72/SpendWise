@@ -27,6 +27,20 @@ interface TransactionDao {
         endExclusive: Long
     ): Flow<List<TransactionWithCategory>>
 
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE transactionDate >= :startInclusive
+          AND transactionDate < :endExclusive
+        ORDER BY transactionDate DESC, createdAt DESC
+        """
+    )
+    fun observeTransactionsBetween(
+        startInclusive: Long,
+        endExclusive: Long
+    ): Flow<List<TransactionWithCategory>>
+
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long
 }

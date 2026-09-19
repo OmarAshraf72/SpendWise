@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.spendwise.navigation.MainDestination
 import com.example.spendwise.screens.AnalyticsScreen
 import com.example.spendwise.screens.AddExpenseScreen
+import com.example.spendwise.screens.AddIncomeScreen
 import com.example.spendwise.screens.CategoriesScreen
 import com.example.spendwise.screens.HomeScreen
 import com.example.spendwise.screens.SettingsScreen
@@ -29,11 +30,12 @@ fun SpendWiseApp() {
     val currentRoute = backStackEntry?.destination?.route
 
     val addExpenseRoute = "add_expense"
+    val addIncomeRoute = "add_income"
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (currentRoute != addExpenseRoute) {
+            if (currentRoute != addExpenseRoute && currentRoute != addIncomeRoute) {
                 NavigationBar {
                     MainDestination.entries.forEach { destination ->
                         NavigationBarItem(
@@ -61,7 +63,10 @@ fun SpendWiseApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(MainDestination.Home.route) {
-                HomeScreen(onAddExpense = { navController.navigate(addExpenseRoute) })
+                HomeScreen(
+                    onAddExpense = { navController.navigate(addExpenseRoute) },
+                    onAddIncome = { navController.navigate(addIncomeRoute) }
+                )
             }
             composable(MainDestination.Transactions.route) {
                 TransactionsScreen(onAddExpense = { navController.navigate(addExpenseRoute) })
@@ -71,6 +76,9 @@ fun SpendWiseApp() {
             composable(MainDestination.Settings.route) { SettingsScreen() }
             composable(addExpenseRoute) {
                 AddExpenseScreen(onSaved = { navController.popBackStack() })
+            }
+            composable(addIncomeRoute) {
+                AddIncomeScreen(onSaved = { navController.popBackStack() })
             }
         }
     }

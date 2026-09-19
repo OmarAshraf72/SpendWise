@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spendwise.data.SpendWiseDatabase
 import com.example.spendwise.data.TransactionRepository
+import com.example.spendwise.data.TransactionType
 import com.example.spendwise.data.TransactionWithCategory
 import com.example.spendwise.data.formatEgp
 import java.math.BigInteger
@@ -25,6 +26,9 @@ data class CategorySpendingUi(
 data class HomeUiState(
     val monthLabel: String,
     val totalSpentMinor: Long = 0,
+    val totalIncomeMinor: Long = 0,
+    val remainingMinor: Long = 0,
+    val incomeSpentPercentageTenths: Int? = null,
     val transactionCount: Int = 0,
     val categorySpending: List<CategorySpendingUi> = emptyList(),
     val insight: String = "No spending recorded this month yet."
@@ -45,7 +49,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         .toInstant()
         .toEpochMilli()
 
-    val uiState = repository.observeExpensesBetween(startInclusive, endExclusive)
+    val uiState = repository.observeTransactionsBetween(startInclusive, endExclusive)
         .map(::buildUiState)
         .stateIn(
             scope = viewModelScope,
@@ -53,10 +57,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = HomeUiState(monthLabel = monthLabel)
         )
 
-    private fun buildUiState(expenses: List<TransactionWithCategory>): HomeUiState {
+    private fun buildUiState(transactions: List<TransactionWithCategory>): HomeUiState {
+        val expenses = transactions.filter { it.transaction.type == TransactionType.EXPENSE }
+        val income = transactions.filter { it.transaction.type == TransactionType.INCOME }
         val totalSpent = expenses.fold(0L) { total, item ->
             total + item.transaction.amountMinor
         }
+        val totalIncome = income.fold(0L) { total, item ->
+            total + item.transaction.amountMinor
+        }
+        val remaining = totalIncome - totalSpent
         val grouped = expenses.groupBy { item ->
             CategoryKey(item.category?.id, item.category?.name ?: "Uncategorized")
         }
@@ -73,15 +83,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }.sortedWith(compareByDescending<CategorySpendingUi> { it.amountMinor }.thenBy { it.name })
 
         val topCategory = categorySpending.firstOrNull()
-        val insight = if (topCategory == null) {
+        val spendingInsight = if (topCategory == null) {
             "No spending recorded this month yet."
         } else {
             "Your highest spending category this month is ${topCategory.name} at ${formatEgp(topCategory.amountMinor)}."
+        }
+        val insight = if (totalIncome > 0L && totalSpent > totalIncome) {
+            "$spendingInsight You have spent ${formatEgp(totalSpent - totalIncome)} more than your recorded income this month."
+        } else {
+            spendingInsight
         }
 
         return HomeUiState(
             monthLabel = monthLabel,
             totalSpentMinor = totalSpent,
+            totalIncomeMinor = totalIncome,
+            remainingMinor = remaining,
+            incomeSpentPercentageTenths = if (totalIncome > 0L) {
+                percentageTenths(totalSpent, totalIncome)
+            } else null,
             transactionCount = expenses.size,
             categorySpending = categorySpending,
             insight = insight
