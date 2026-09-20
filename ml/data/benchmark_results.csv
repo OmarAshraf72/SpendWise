@@ -1,0 +1,3 @@
+model,overall_top1_accuracy,overall_top3_accuracy,average_inference_ms_per_item,model_load_seconds,embedding_dimension,cached_model_size_bytes,mean_score_gap_correct,mean_score_gap_incorrect,score_gap_correctness_correlation
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,0.636986301369863,0.773972602739726,3.091593835923872,7.355134400015231,384,479729010,0.1439205295135898,0.0445417389625086,0.5117869499415031
+intfloat/multilingual-e5-small,0.684931506849315,0.8287671232876712,3.7125178081723416,11.558498999977019,384,493292828,0.020216286182403564,0.0040478188058604364,0.5174500501578785

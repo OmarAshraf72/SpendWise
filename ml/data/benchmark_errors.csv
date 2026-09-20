@@ -1,0 +1,100 @@
+text,expected_category,predicted_category,predicted_score,second_best_category,second_best_score,language,variant_type,model
+صدور فراخ,Groceries,Other,0.34728533029556274,Bills,0.23916903138160706,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+علبة تونة,Groceries,Transport,0.2953268587589264,Other,0.2603413164615631,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+M1LK 1L,Groceries,Transport,0.15302371978759766,Books,0.05866324156522751,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+R1CE 1KG,Groceries,Bills,0.03692030906677246,Transport,0.029843028634786606,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+خيار طازج,Fruits & Vegetables,Transport,0.2980552613735199,Restaurants,0.2758568227291107,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+T0MAT0ES,Fruits & Vegetables,Transport,0.11200891435146332,Bills,0.07558753341436386,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+تفـاح,Fruits & Vegetables,Transport,0.2356833964586258,Entertainment,0.17832601070404053,ar,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+McChicken Meal,Restaurants,Groceries,0.41357532143592834,Restaurants,0.3445999026298523,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+KFC Family Meal,Restaurants,Groceries,0.42320239543914795,Restaurants,0.33365488052368164,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+وجبة برجر,Restaurants,Groceries,0.3541751503944397,Restaurants,0.3382954001426697,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+ساندوتش شاورما,Restaurants,Other,0.2606966495513916,Books,0.19421645998954773,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Burger وجبة,Restaurants,Groceries,0.3635483980178833,Restaurants,0.26366761326789856,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+McCh1cken MeaI,Restaurants,Books,0.11709228157997131,Transport,0.1080022007226944,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Gasoline 92,Transport,Bills,0.30362486839294434,Transport,0.2651107907295227,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+مشوار كريم,Transport,Restaurants,0.23258131742477417,Groceries,0.18501786887645721,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+بنزين 92,Transport,Bills,0.26656460762023926,Transport,0.21272021532058716,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Persil Gel,Household,Personal Care,0.25014200806617737,Medicine,0.1868983805179596,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Clorox Bleach,Household,Personal Care,0.1399208903312683,Household,0.12316480278968811,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+كلور مبيض,Household,Transport,0.08868000656366348,Personal Care,0.07132155448198318,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+DettoI Floor C1eaner,Household,Transport,0.18110391497612,Household,0.16261589527130127,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+PersiI GeI,Household,Other,0.19238825142383575,Books,0.18481600284576416,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Panadol Extra,Medicine,Other,0.17103582620620728,Household,0.11836876720190048,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Brufen 400,Medicine,Transport,0.15407948195934296,Bills,0.14894814789295197,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Immulant Plus 20 Cap,Medicine,Shopping,0.19033661484718323,Household,0.1600639969110489,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+بنادول إكسترا,Medicine,Other,0.2579854726791382,Books,0.23095427453517914,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+بروفين 400,Medicine,Other,0.14850232005119324,Transport,0.138104647397995,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+حمض الفوليك,Medicine,Transport,0.1747455596923828,Books,0.1673719882965088,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Panadol مسكن,Medicine,Restaurants,0.3064384162425995,Transport,0.1915743052959442,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+PANAD0L EXTRA,Medicine,Other,0.15604746341705322,Bills,0.098765529692173,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+F0LIC ACID 600 MCG,Medicine,Household,0.08139391243457794,Medicine,0.07457409054040909,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+MLANT PLUS 20 CAP,Medicine,Groceries,0.1820783019065857,Other,0.17731162905693054,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+FoLic AciD 600 McG,Medicine,Household,0.17316855490207672,Bills,0.11258671432733536,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Phone Charger,Shopping,Bills,0.28671929240226746,Household,0.14760732650756836,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+تيشيرت قطن,Shopping,Books,0.22010716795921326,Other,0.2172940969467163,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+سماعات بلوتوث,Shopping,Books,0.17985627055168152,Entertainment,0.1761179268360138,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+شاحن موبايل,Shopping,Transport,0.3985605239868164,Bills,0.290188193321228,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Headphones سماعات,Shopping,Transport,0.17217183113098145,Other,0.15998098254203796,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+W1RELESS HEADPH0NES,Shopping,Transport,0.03747645765542984,Books,0.0250186026096344,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+PH0NE CHARGER,Shopping,Books,0.12446432560682297,Transport,0.07512667775154114,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+تذكرة حفلة,Entertainment,Restaurants,0.17669953405857086,Other,0.12659808993339539,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+NETFL1X,Entertainment,Bills,0.14150643348693848,Restaurants,0.07095223665237427,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+C1NEMA T1CKET,Entertainment,Transport,0.1046440601348877,Medicine,0.09775973856449127,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+شامبو دوف,Personal Care,Other,0.1762007176876068,Entertainment,0.1749388575553894,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+شفرة حلاقة,Personal Care,Books,0.21753008663654327,Other,0.20970889925956726,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+شامبو D0VE,Personal Care,Transport,0.09648732841014862,Other,0.08645571023225784,mixed,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+G1LLETTE RAZ0R,Personal Care,Transport,0.029410960152745247,Books,0.029005207121372223,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Document Printing,Other,Books,0.30090922117233276,Other,0.20461909472942352,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+طباعة مستندات,Other,Books,0.3704654574394226,Other,0.2796666920185089,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+SERV1CE FEE,Other,Books,0.10342312604188919,Other,0.06342048943042755,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Clean Code,Books,Household,0.21984539926052094,Books,0.12917008996009827,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+The Psychology of Money,Books,Other,0.3205908536911011,Bills,0.2843608558177948,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+AT0MIC HAB1TS,Books,Transport,0.03153485432267189,Books,0.013821803033351898,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+CLEAN C0DE,Books,Household,0.32441025972366333,Personal Care,0.16138915717601776,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Egyptian White Cheese,Groceries,Fruits & Vegetables,0.8140977621078491,Restaurants,0.813804030418396,en,clean,intfloat/multilingual-e5-small
+صدور فراخ,Groceries,Fruits & Vegetables,0.804541826248169,Groceries,0.8020811676979065,ar,clean,intfloat/multilingual-e5-small
+علبة تونة,Groceries,Bills,0.8173636198043823,Medicine,0.8135353326797485,ar,clean,intfloat/multilingual-e5-small
+M1LK 1L,Groceries,Medicine,0.8006196022033691,Bills,0.8001512289047241,en,ocr_noise,intfloat/multilingual-e5-small
+R1CE 1KG,Groceries,Medicine,0.8181403875350952,Groceries,0.8153996467590332,en,ocr_noise,intfloat/multilingual-e5-small
+Cucumber Pack,Fruits & Vegetables,Groceries,0.8150204420089722,Medicine,0.8035250306129456,en,clean,intfloat/multilingual-e5-small
+خيار طازج,Fruits & Vegetables,Transport,0.8241642713546753,Fruits & Vegetables,0.8208228349685669,ar,clean,intfloat/multilingual-e5-small
+T0MAT0ES,Fruits & Vegetables,Entertainment,0.8116590976715088,Fruits & Vegetables,0.8103722929954529,en,ocr_noise,intfloat/multilingual-e5-small
+تفـاح,Fruits & Vegetables,Entertainment,0.8248790502548218,Restaurants,0.8244798183441162,ar,ocr_noise,intfloat/multilingual-e5-small
+KFC Family Meal,Restaurants,Groceries,0.8184405565261841,Restaurants,0.8168690204620361,en,clean,intfloat/multilingual-e5-small
+بيتزا مارجريتا,Restaurants,Transport,0.763643741607666,Restaurants,0.7609742283821106,ar,clean,intfloat/multilingual-e5-small
+ساندوتش شاورما,Restaurants,Entertainment,0.7575700283050537,Groceries,0.7541640996932983,ar,clean,intfloat/multilingual-e5-small
+McCh1cken MeaI,Restaurants,Entertainment,0.8136050701141357,Restaurants,0.8130701184272766,en,ocr_noise,intfloat/multilingual-e5-small
+P1ZZA MARGHER1TA,Restaurants,Personal Care,0.7972759008407593,Groceries,0.7922462821006775,en,ocr_noise,intfloat/multilingual-e5-small
+مشوار كريم,Transport,Personal Care,0.8282487392425537,Transport,0.8282393217086792,ar,clean,intfloat/multilingual-e5-small
+Persil Gel,Household,Personal Care,0.8124898672103882,Medicine,0.807357668876648,en,clean,intfloat/multilingual-e5-small
+كلور مبيض,Household,Entertainment,0.7711167931556702,Personal Care,0.764252781867981,ar,clean,intfloat/multilingual-e5-small
+Fairy صابون أطباق,Household,Personal Care,0.8618639707565308,Restaurants,0.8510477542877197,mixed,mixed_language,intfloat/multilingual-e5-small
+DettoI Floor C1eaner,Household,Personal Care,0.8164728879928589,Entertainment,0.8136812448501587,en,ocr_noise,intfloat/multilingual-e5-small
+PersiI GeI,Household,Bills,0.8002505302429199,Entertainment,0.799826979637146,en,ocr_noise,intfloat/multilingual-e5-small
+Brufen 400,Medicine,Personal Care,0.793062150478363,Transport,0.7895489931106567,en,clean,intfloat/multilingual-e5-small
+بنادول إكسترا,Medicine,Entertainment,0.7865021228790283,Fruits & Vegetables,0.7843049764633179,ar,clean,intfloat/multilingual-e5-small
+بروفين 400,Medicine,Personal Care,0.804663896560669,Transport,0.8029487133026123,ar,clean,intfloat/multilingual-e5-small
+Panadol مسكن,Medicine,Transport,0.8153489828109741,Fruits & Vegetables,0.8117715716362,mixed,mixed_language,intfloat/multilingual-e5-small
+PANAD0L EXTRA,Medicine,Groceries,0.804563045501709,Fruits & Vegetables,0.7985233068466187,en,ocr_noise,intfloat/multilingual-e5-small
+MLANT PLUS 20 CAP,Medicine,Groceries,0.7967489957809448,Medicine,0.7958478927612305,en,ocr_noise,intfloat/multilingual-e5-small
+Wireless Headphones,Shopping,Entertainment,0.801612138748169,Bills,0.7981811761856079,en,clean,intfloat/multilingual-e5-small
+Phone Charger,Shopping,Bills,0.8240969181060791,Shopping,0.8140103220939636,en,clean,intfloat/multilingual-e5-small
+تيشيرت قطن,Shopping,Transport,0.837655782699585,Restaurants,0.8129896521568298,ar,clean,intfloat/multilingual-e5-small
+سماعات بلوتوث,Shopping,Entertainment,0.8101078271865845,Bills,0.8040030002593994,ar,clean,intfloat/multilingual-e5-small
+شاحن موبايل,Shopping,Bills,0.7992932796478271,Transport,0.7935884594917297,ar,clean,intfloat/multilingual-e5-small
+Headphones سماعات,Shopping,Entertainment,0.8390630483627319,Personal Care,0.8380299210548401,mixed,mixed_language,intfloat/multilingual-e5-small
+PH0NE CHARGER,Shopping,Bills,0.7836016416549683,Entertainment,0.7817052602767944,en,ocr_noise,intfloat/multilingual-e5-small
+G1LLETTE RAZ0R,Personal Care,Entertainment,0.802324652671814,Shopping,0.7963846325874329,en,ocr_noise,intfloat/multilingual-e5-small
+Document Printing,Other,Bills,0.7922738790512085,Medicine,0.7914949655532837,en,clean,intfloat/multilingual-e5-small
+رسوم خدمة,Other,Bills,0.8383515477180481,Other,0.8372223973274231,ar,clean,intfloat/multilingual-e5-small
+M1SC EXPENSE,Other,Entertainment,0.7995995879173279,Other,0.798277735710144,en,ocr_noise,intfloat/multilingual-e5-small
+Atomic Habits,Books,Entertainment,0.8176125884056091,Restaurants,0.8147156238555908,en,clean,intfloat/multilingual-e5-small
+Clean Code,Books,Personal Care,0.8036496043205261,Household,0.8020480275154114,en,clean,intfloat/multilingual-e5-small
+The Psychology of Money,Books,Bills,0.8184994459152222,Other,0.8033473491668701,en,clean,intfloat/multilingual-e5-small
+The Pragmatic Programmer,Books,Bills,0.7938600778579712,Entertainment,0.7905560731887817,en,clean,intfloat/multilingual-e5-small
+العادات الذرية,Books,Personal Care,0.8182516098022461,Restaurants,0.8176242709159851,ar,clean,intfloat/multilingual-e5-small
+كتاب فن اللامبالاة,Books,Personal Care,0.8086768388748169,Books,0.8077799081802368,ar,clean,intfloat/multilingual-e5-small
+Atomic Habits نسخة عربية,Books,Transport,0.8335306644439697,Shopping,0.8196080923080444,mixed,mixed_language,intfloat/multilingual-e5-small
+AT0MIC HAB1TS,Books,Medicine,0.8001350164413452,Entertainment,0.7999725341796875,en,ocr_noise,intfloat/multilingual-e5-small
+CLEAN C0DE,Books,Personal Care,0.8024299144744873,Household,0.8003939986228943,en,ocr_noise,intfloat/multilingual-e5-small

@@ -1,0 +1,37 @@
+model,dimension,group,examples,top1_accuracy,top3_accuracy,average_score_gap
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,language,ar,48,0.6041666666666666,0.7708333333333334,0.1165772342743973
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,language,en,72,0.5833333333333334,0.7361111111111112,0.0931690033370008
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,language,mixed,26,0.8461538461538461,0.8846153846153846,0.13236330478237227
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,variant_type,clean,95,0.6842105263157895,0.8315789473684211,0.11963945752695987
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,variant_type,mixed_language,25,0.88,0.92,0.13725657224655152
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,variant_type,ocr_noise,26,0.23076923076923078,0.4230769230769231,0.0364676399443012
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Bills,12,1.0,1.0,0.1928607958058516
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Books,12,0.6666666666666666,0.8333333333333334,0.10017374499390523
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Entertainment,12,0.75,0.8333333333333334,0.11148370119432609
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Fruits & Vegetables,12,0.75,0.8333333333333334,0.18190190879007181
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Groceries,12,0.6666666666666666,0.6666666666666666,0.11048783206691344
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Household,12,0.5833333333333334,0.75,0.08568669234712918
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Medicine,14,0.21428571428571427,0.2857142857142857,0.06643664517572948
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Other,12,0.75,1.0,0.10380493414898713
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Personal Care,12,0.6666666666666666,0.6666666666666666,0.09546091423059504
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Restaurants,12,0.5,0.9166666666666666,0.08354333167274793
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Shopping,12,0.4166666666666667,0.5833333333333334,0.06937535976370175
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,category,Transport,12,0.75,1.0,0.09982148309548695
+intfloat/multilingual-e5-small,language,ar,48,0.6666666666666666,0.8333333333333334,0.016213513910770416
+intfloat/multilingual-e5-small,language,en,72,0.6388888888888888,0.8055555555555556,0.012719180021021102
+intfloat/multilingual-e5-small,language,mixed,26,0.8461538461538461,0.8846153846153846,0.01976148669536297
+intfloat/multilingual-e5-small,variant_type,clean,95,0.7157894736842105,0.8421052631578947,0.01674848669453671
+intfloat/multilingual-e5-small,variant_type,mixed_language,25,0.84,0.88,0.019563424587249755
+intfloat/multilingual-e5-small,variant_type,ocr_noise,26,0.4230769230769231,0.7307692307692307,0.004909093563373272
+intfloat/multilingual-e5-small,category,Bills,12,1.0,1.0,0.03351486225922903
+intfloat/multilingual-e5-small,category,Books,12,0.25,0.3333333333333333,0.007766639192899068
+intfloat/multilingual-e5-small,category,Entertainment,12,1.0,1.0,0.029716581106185913
+intfloat/multilingual-e5-small,category,Fruits & Vegetables,12,0.6666666666666666,0.9166666666666666,0.025640298922856648
+intfloat/multilingual-e5-small,category,Groceries,12,0.5833333333333334,0.9166666666666666,0.0067414989074071245
+intfloat/multilingual-e5-small,category,Household,12,0.5833333333333334,0.6666666666666666,0.011307661732037863
+intfloat/multilingual-e5-small,category,Medicine,14,0.5714285714285714,0.7142857142857143,0.006775000265666417
+intfloat/multilingual-e5-small,category,Other,12,0.75,1.0,0.006963968276977539
+intfloat/multilingual-e5-small,category,Personal Care,12,0.9166666666666666,1.0,0.019022126992543537
+intfloat/multilingual-e5-small,category,Restaurants,12,0.5833333333333334,0.8333333333333334,0.010706032315889994
+intfloat/multilingual-e5-small,category,Shopping,12,0.4166666666666667,0.5833333333333334,0.009959916273752848
+intfloat/multilingual-e5-small,category,Transport,12,0.9166666666666666,1.0,0.014741937319437662

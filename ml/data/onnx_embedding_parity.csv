@@ -1,0 +1,17 @@
+runtime,case,input_role,text,cosine_similarity_to_pytorch,mean_absolute_difference,max_absolute_difference
+ONNX_FP32,english_item,query,Panadol Extra,1.0000001192092896,1.398620952386409e-08,7.078051567077637e-08
+ONNX_FP32,arabic_item,query,بنادول إكسترا,1.0,2.146756195031685e-08,7.82310962677002e-08
+ONNX_FP32,mixed_item,query,شامبو Dove 400ml,1.0000001192092896,1.768876245478168e-08,7.450580596923828e-08
+ONNX_FP32,ocr_noise,query,PANAD0L EX7RA,1.0000001192092896,2.0614558948750528e-08,7.450580596923828e-08
+ONNX_FP32,ocr_noise_arabic,query,حليب جهينه 1L,1.0,1.7423644749214873e-08,5.960464477539063e-08
+ONNX_FP32,english_category,passage,"medicines, pharmacy products, vitamins, medical supplies, drugs, supplements, أدوية، صيدلية، فيتامينات، مستلزمات طبية، مكملات غذائية",1.0,2.1089968882392895e-08,8.195638656616211e-08
+ONNX_FP32,arabic_category,passage,"household supplies, cleaning products, detergent, dish soap, disinfectant, home maintenance, مستلزمات منزل، منظفات، مسحوق غسيل، صابون أطباق، مطهرات",1.0,2.007709554163739e-08,8.009374141693115e-08
+ONNX_FP32,books_category,passage,"books, novels, textbooks, reading, literature, educational books, technical books, كتب، روايات، مراجع، كتب دراسية، قراءة، أدب",1.0,1.761638124264664e-08,7.450580596923828e-08
+ONNX_INT8,english_item,query,Panadol Extra,0.9925088882446289,0.004974354524165392,0.02008703723549843
+ONNX_INT8,arabic_item,query,بنادول إكسترا,0.9864177703857422,0.006718739867210388,0.03369252383708954
+ONNX_INT8,mixed_item,query,شامبو Dove 400ml,0.9933710098266602,0.0047385008074343204,0.01764734275639057
+ONNX_INT8,ocr_noise,query,PANAD0L EX7RA,0.9919288158416748,0.0050458284094929695,0.022905506193637848
+ONNX_INT8,ocr_noise_arabic,query,حليب جهينه 1L,0.9935069680213928,0.004587498959153891,0.017044203355908394
+ONNX_INT8,english_category,passage,"medicines, pharmacy products, vitamins, medical supplies, drugs, supplements, أدوية، صيدلية، فيتامينات، مستلزمات طبية، مكملات غذائية",0.9889060258865356,0.006005916744470596,0.02186530828475952
+ONNX_INT8,arabic_category,passage,"household supplies, cleaning products, detergent, dish soap, disinfectant, home maintenance, مستلزمات منزل، منظفات، مسحوق غسيل، صابون أطباق، مطهرات",0.9897883534431458,0.005751774180680513,0.024928301572799683
+ONNX_INT8,books_category,passage,"books, novels, textbooks, reading, literature, educational books, technical books, كتب، روايات، مراجع، كتب دراسية، قراءة، أدب",0.9897197484970093,0.00587400421500206,0.02433905005455017

@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "source_model": "intfloat/multilingual-e5-small",
+  "source_revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "task": "normalized_sentence_embedding",
+  "embedding_dimension": 384,
+  "onnx_opset": 17,
+  "graph_contract": {
+    "inputs": [
+      {
+        "name": "input_ids",
+        "dtype": "tensor(int64)",
+        "shape": [
+          "batch",
+          "sequence"
+        ]
+      },
+      {
+        "name": "attention_mask",
+        "dtype": "tensor(int64)",
+        "shape": [
+          "batch",
+          "sequence"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "sentence_embedding",
+        "dtype": "tensor(float)",
+        "shape": [
+          "batch",
+          384
+        ]
+      }
+    ],
+    "dynamic_batch": true,
+    "dynamic_sequence_length": true
+  },
+  "text_contract": {
+    "query_prefix": "query: ",
+    "category_and_reference_prefix": "passage: ",
+    "prefixes_are_required": true,
+    "model_max_sequence_length": 512,
+    "padding": "right, to longest sequence in batch",
+    "truncation": "right"
+  },
+  "tokenizer": {
+    "class": "XLMRobertaTokenizer",
+    "algorithm": "SentencePiece / XLM-RoBERTa",
+    "model_max_length": 512,
+    "add_prefix_space": true,
+    "special_token_ids": {
+      "bos": 0,
+      "pad": 1,
+      "eos": 2,
+      "unk": 3,
+      "mask": 250001
+    }
+  },
+  "pooling": {
+    "type": "attention_mask_aware_mean",
+    "formula": "sum(token_embeddings * attention_mask) / clamp(sum(attention_mask), 1e-9)",
+    "includes_prefix_tokens": true
+  },
+  "normalization": {
+    "type": "L2",
+    "axis": 1,
+    "included_in_onnx_graph": true
+  },
+  "quantization": {
+    "fp32": "unquantized ONNX weights",
+    "int8": "ONNX Runtime dynamic QInt8 weight quantization"
+  },
+  "artifacts": {
+    "fp32_model": {
+      "path": "artifacts/fp32/multilingual-e5-small.onnx",
+      "bytes": 470268685,
+      "sha256": "e3dee1d2ea61d8ee24212ee0d1c70d64f060ed8f5f4fedb5e996356edce1b143"
+    },
+    "int8_model": {
+      "path": "artifacts/int8/multilingual-e5-small-int8.onnx",
+      "bytes": 118129688,
+      "sha256": "1204375abb58337e789829306c9b9844d8ecd662cd7530d0643bdb4543530236"
+    },
+    "tokenizer_files": [
+      {
+        "path": "artifacts/tokenizer/tokenizer.json",
+        "bytes": 17082735,
+        "sha256": "6040ba36e3e2f7b2fa6ae076b69d024a08666bea4c345105a32e542900fcc7e7"
+      },
+      {
+        "path": "artifacts/tokenizer/tokenizer_config.json",
+        "bytes": 424,
+        "sha256": "4a0889ef5175b1a838fe2e6e5aace5252f453889b0480eff7a6a7fe90eefc99e"
+      }
+    ],
+    "tokenizer_total_bytes": 17083159
+  },
+  "benchmark": {
+    "dataset_rows": 146,
+    "canonical_products": 58,
+    "prototype_strategy": "HYBRID_PROTOTYPE",
+    "prototype_weights": {
+      "description": 0.5,
+      "clean_example_centroid": 0.5
+    },
+    "canonical_id_exclusion": true,
+    "evaluated_max_sequence_length": 512,
+    "recommended_max_sequence_length": 64,
+    "recommendation_rule": "smallest tested limit with no truncation and <=0.5 percentage-point loss"
+  },
+  "results_files": [
+    "../data/onnx_benchmark_results.csv",
+    "../data/onnx_embedding_parity.csv",
+    "../data/onnx_threshold_analysis.csv",
+    "../data/onnx_custom_category_simulation.csv",
+    "../data/onnx_performance_results.csv",
+    "../data/onnx_sequence_length_analysis.csv",
+    "../data/onnx_artifact_sizes.csv"
+  ]
+}

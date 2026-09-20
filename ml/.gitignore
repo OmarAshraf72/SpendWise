@@ -1,0 +1,8 @@
+.venv/
+.cache/
+__pycache__/
+.ipynb_checkpoints/
+onnx/artifacts/
+onnx/tmp/
+mobile/artifacts/
+mobile/tmp/

@@ -1,0 +1,9 @@
+model,state,confirmed_examples,books_top1_accuracy,evaluation_trials,evaluation_method
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,BOOKS_0_EXAMPLES,0,0.6666666666666666,12,all eligible leave-one-canonical-out reference combinations
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,BOOKS_1_EXAMPLES,1,0.7638888888888888,72,all eligible leave-one-canonical-out reference combinations
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,BOOKS_3_EXAMPLES,3,0.8166666666666667,240,all eligible leave-one-canonical-out reference combinations
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,BOOKS_5_EXAMPLES,5,0.8333333333333334,72,all eligible leave-one-canonical-out reference combinations
+intfloat/multilingual-e5-small,BOOKS_0_EXAMPLES,0,0.25,12,all eligible leave-one-canonical-out reference combinations
+intfloat/multilingual-e5-small,BOOKS_1_EXAMPLES,1,1.0,72,all eligible leave-one-canonical-out reference combinations
+intfloat/multilingual-e5-small,BOOKS_3_EXAMPLES,3,1.0,240,all eligible leave-one-canonical-out reference combinations
+intfloat/multilingual-e5-small,BOOKS_5_EXAMPLES,5,1.0,72,all eligible leave-one-canonical-out reference combinations

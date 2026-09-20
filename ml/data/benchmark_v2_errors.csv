@@ -1,0 +1,327 @@
+canonical_id,text,expected_category,predicted_category,predicted_score,second_best_category,second_best_score,score_gap,language,variant_type,model,strategy
+chicken_breast,Chicken Breast,Groceries,Restaurants,0.3637322783470154,Groceries,0.3121131360530853,0.051619142293930054,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+groceries_egyptian_white_cheese,Egyptian White Cheese,Groceries,Restaurants,0.5451722145080566,Medicine,0.36899834871292114,0.1761738657951355,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+groceries_egyptian_white_cheese,Egyptian White Cheese,Groceries,Restaurants,0.42284926772117615,Groceries,0.35275566577911377,0.07009360194206238,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+chicken_breast,صدور فراخ,Groceries,Other,0.3472852408885956,Bills,0.23916901648044586,0.10811622440814972,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+chicken_breast,صدور فراخ,Groceries,Books,0.6675613522529602,Other,0.6592325568199158,0.008328795433044434,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+chicken_breast,صدور فراخ,Groceries,Other,0.5631154775619507,Books,0.5119267106056213,0.051188766956329346,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+rice_1kg,كيس أرز 1 كيلو,Groceries,Medicine,0.48793721199035645,Groceries,0.47792714834213257,0.010010063648223877,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+groceries_8,علبة تونة,Groceries,Transport,0.295326828956604,Other,0.2603413462638855,0.034985482692718506,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+groceries_8,علبة تونة,Groceries,Shopping,0.6269831657409668,Medicine,0.5665233731269836,0.060459792613983154,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+groceries_8,علبة تونة,Groceries,Shopping,0.5066661834716797,Transport,0.4898808002471924,0.016785383224487305,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+chicken_breast,Chicken فراخ مجمدة,Groceries,Restaurants,0.6056085824966431,Groceries,0.5344786643981934,0.07112991809844971,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+milk_1l,M1LK 1L,Groceries,Transport,0.15302373468875885,Books,0.058663226664066315,0.09436050802469254,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+milk_1l,M1LK 1L,Groceries,Medicine,0.47716325521469116,Transport,0.3672456443309784,0.10991761088371277,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+milk_1l,M1LK 1L,Groceries,Medicine,0.31537237763404846,Transport,0.30823832750320435,0.007134050130844116,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+rice_1kg,R1CE 1KG,Groceries,Bills,0.03692031651735306,Transport,0.02984301932156086,0.007077297195792198,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+rice_1kg,R1CE 1KG,Groceries,Medicine,0.41861921548843384,Transport,0.2510470747947693,0.16757214069366455,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+rice_1kg,R1CE 1KG,Groceries,Medicine,0.2290152907371521,Transport,0.16641584038734436,0.06259945034980774,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+banana,موز بلدي,Fruits & Vegetables,Groceries,0.5134309530258179,Fruits & Vegetables,0.45892971754074097,0.054501235485076904,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+banana,موز بلدي,Fruits & Vegetables,Groceries,0.434333860874176,Fruits & Vegetables,0.41391634941101074,0.020417511463165283,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+cucumber,خيار طازج,Fruits & Vegetables,Transport,0.2980552315711975,Restaurants,0.27585679292678833,0.02219843864440918,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+cucumber,خيار طازج,Fruits & Vegetables,Books,0.5160771608352661,Transport,0.4432852268218994,0.0727919340133667,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+cucumber,خيار طازج,Fruits & Vegetables,Transport,0.43921390175819397,Personal Care,0.404651403427124,0.034562498331069946,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+tomatoes,T0MAT0ES,Fruits & Vegetables,Transport,0.11200893670320511,Bills,0.07558754086494446,0.03642139583826065,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+tomatoes,T0MAT0ES,Fruits & Vegetables,Medicine,0.45237109065055847,Shopping,0.3832097053527832,0.06916138529777527,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+tomatoes,T0MAT0ES,Fruits & Vegetables,Medicine,0.29937803745269775,Shopping,0.24732047319412231,0.05205756425857544,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+apples,تفـاح,Fruits & Vegetables,Transport,0.23568344116210938,Entertainment,0.17832599580287933,0.05735744535923004,ar,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+apples,تفـاح,Fruits & Vegetables,Groceries,0.6806612014770508,Medicine,0.645790696144104,0.03487050533294678,ar,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+apples,تفـاح,Fruits & Vegetables,Groceries,0.4951302111148834,Transport,0.48509857058525085,0.010031640529632568,ar,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+mcchicken_meal,McChicken Meal,Restaurants,Groceries,0.41357529163360596,Restaurants,0.3445998430252075,0.06897544860839844,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+restaurants_kfc_family_meal,KFC Family Meal,Restaurants,Groceries,0.4232024848461151,Restaurants,0.33365488052368164,0.08954760432243347,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+burger_meal,وجبة برجر,Restaurants,Groceries,0.3541751205921173,Restaurants,0.33829545974731445,0.015879660844802856,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+coffee,قهوة لاتيه,Restaurants,Groceries,0.5100632905960083,Restaurants,0.4745554029941559,0.03550788760185242,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+restaurants_32,ساندوتش شاورما,Restaurants,Other,0.2606965899467468,Books,0.19421641528606415,0.06648017466068268,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+restaurants_32,ساندوتش شاورما,Restaurants,Groceries,0.5490842461585999,Personal Care,0.5342041850090027,0.014880061149597168,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+restaurants_32,ساندوتش شاورما,Restaurants,Personal Care,0.410828560590744,Groceries,0.40565502643585205,0.005173534154891968,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+coffee,Coffee قهوة,Restaurants,Groceries,0.39048367738723755,Transport,0.36989539861679077,0.020588278770446777,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+burger_meal,Burger وجبة,Restaurants,Groceries,0.3635483682155609,Restaurants,0.26366758346557617,0.09988078474998474,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+mcchicken_meal,McCh1cken MeaI,Restaurants,Books,0.1170923113822937,Transport,0.10800221562385559,0.00909009575843811,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+mcchicken_meal,McCh1cken MeaI,Restaurants,Medicine,0.5492693781852722,Groceries,0.5020776987075806,0.04719167947769165,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+mcchicken_meal,McCh1cken MeaI,Restaurants,Groceries,0.36099687218666077,Medicine,0.3527032732963562,0.008293598890304565,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+margherita_pizza,P1ZZA MARGHER1TA,Restaurants,Medicine,0.5522115230560303,Groceries,0.5294532775878906,0.02275824546813965,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+margherita_pizza,P1ZZA MARGHER1TA,Restaurants,Medicine,0.43168652057647705,Groceries,0.38268905878067017,0.048997461795806885,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+metro_ticket,Cairo Metro Ticket,Transport,Entertainment,0.3816741108894348,Transport,0.3343978822231293,0.04727622866630554,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+gasoline_92,Gasoline 92,Transport,Bills,0.3036249279975891,Transport,0.2651108503341675,0.03851407766342163,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+gasoline_92,Gasoline 92,Transport,Bills,0.45131176710128784,Medicine,0.29075390100479126,0.16055786609649658,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+gasoline_92,Gasoline 92,Transport,Bills,0.41247642040252686,Transport,0.2996923327445984,0.11278408765792847,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+careem_ride,مشوار كريم,Transport,Restaurants,0.23258128762245178,Groceries,0.1850178986787796,0.04756338894367218,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+careem_ride,مشوار كريم,Transport,Groceries,0.6461316347122192,Personal Care,0.603771984577179,0.04235965013504028,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+careem_ride,مشوار كريم,Transport,Groceries,0.49244144558906555,Restaurants,0.4854015111923218,0.007039934396743774,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+metro_ticket,تذكرة مترو,Transport,Entertainment,0.5307929515838623,Transport,0.4183269739151001,0.11246597766876221,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+gasoline_92,بنزين 92,Transport,Bills,0.2665646970272064,Transport,0.21272024512290955,0.053844451904296875,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+gasoline_92,بنزين 92,Transport,Bills,0.4235503375530243,Medicine,0.4144485592842102,0.009101778268814087,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+gasoline_92,بنزين 92,Transport,Bills,0.3770596385002136,Transport,0.290995717048645,0.0860639214515686,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+uber_trip,UBER TR1P,Transport,Medicine,0.413868248462677,Groceries,0.3504258990287781,0.06344234943389893,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+persil_gel,Persil Gel,Household,Personal Care,0.250141978263855,Medicine,0.18689841032028198,0.063243567943573,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+persil_gel,Persil Gel,Household,Personal Care,0.4753589630126953,Groceries,0.4197489619255066,0.05561000108718872,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+persil_gel,Persil Gel,Household,Personal Care,0.43672704696655273,Medicine,0.3832436203956604,0.053483426570892334,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+clorox_bleach,Clorox Bleach,Household,Personal Care,0.13992086052894592,Household,0.12316479533910751,0.01675606518983841,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+clorox_bleach,Clorox Bleach,Household,Personal Care,0.41360703110694885,Household,0.36563682556152344,0.047970205545425415,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+clorox_bleach,Clorox Bleach,Household,Personal Care,0.33320510387420654,Household,0.28042712807655334,0.0527779757976532,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+clorox_bleach,كلور مبيض,Household,Transport,0.0886799767613411,Personal Care,0.07132155448198318,0.01735842227935791,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+clorox_bleach,كلور مبيض,Household,Groceries,0.3150961995124817,Shopping,0.30856046080589294,0.006535738706588745,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+clorox_bleach,كلور مبيض,Household,Groceries,0.228144571185112,Personal Care,0.20444515347480774,0.02369941771030426,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+dettol_floor_cleaner,DettoI Floor C1eaner,Household,Transport,0.18110395967960358,Household,0.16261589527130127,0.018488064408302307,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+dettol_floor_cleaner,DettoI Floor C1eaner,Household,Medicine,0.3257305920124054,Shopping,0.30034542083740234,0.025385171175003052,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+dettol_floor_cleaner,DettoI Floor C1eaner,Household,Transport,0.2584293484687805,Shopping,0.2537016272544861,0.004727721214294434,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+persil_gel,PersiI GeI,Household,Other,0.19238826632499695,Books,0.18481598794460297,0.007572278380393982,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+persil_gel,PersiI GeI,Household,Medicine,0.6178840398788452,Groceries,0.5913947820663452,0.0264892578125,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+persil_gel,PersiI GeI,Household,Books,0.44929513335227966,Medicine,0.4341282844543457,0.01516684889793396,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+panadol_extra,Panadol Extra,Medicine,Other,0.17103585600852966,Household,0.11836878955364227,0.05266706645488739,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+panadol_extra,Panadol Extra,Medicine,Restaurants,0.48356056213378906,Medicine,0.4606582522392273,0.022902309894561768,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+brufen_400,Brufen 400,Medicine,Transport,0.15407951176166534,Bills,0.14894816279411316,0.005131348967552185,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+brufen_400,Brufen 400,Medicine,Shopping,0.4919707775115967,Medicine,0.4901469051837921,0.0018238723278045654,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+brufen_400,Brufen 400,Medicine,Shopping,0.3504982590675354,Transport,0.34309524297714233,0.007403016090393066,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+immulant_plus_20_cap,Immulant Plus 20 Cap,Medicine,Shopping,0.19033658504486084,Household,0.1600639969110489,0.03027258813381195,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+panadol_extra,بنادول إكسترا,Medicine,Other,0.25798553228378296,Books,0.23095427453517914,0.02703125774860382,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+panadol_extra,بنادول إكسترا,Medicine,Books,0.6652923822402954,Groceries,0.6406638622283936,0.024628520011901855,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+panadol_extra,بنادول إكسترا,Medicine,Books,0.5338993072509766,Transport,0.48809459805488586,0.0458047091960907,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+brufen_400,بروفين 400,Medicine,Other,0.14850233495235443,Transport,0.13810467720031738,0.010397657752037048,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+folic_acid_600_mcg,حمض الفوليك,Medicine,Transport,0.17474550008773804,Books,0.16737200319766998,0.007373496890068054,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+folic_acid_600_mcg,حمض الفوليك,Medicine,Groceries,0.7142643928527832,Personal Care,0.6925259828567505,0.021738409996032715,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+folic_acid_600_mcg,حمض الفوليك,Medicine,Books,0.5051337480545044,Groceries,0.4960470199584961,0.0090867280960083,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+medicine_68,فيتامين سي,Medicine,Fruits & Vegetables,0.34797656536102295,Medicine,0.31841471791267395,0.029561847448349,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+panadol_extra,Panadol مسكن,Medicine,Restaurants,0.3064383864402771,Transport,0.1915743499994278,0.1148640364408493,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+panadol_extra,Panadol مسكن,Medicine,Restaurants,0.5175043344497681,Groceries,0.4227990508079529,0.09470528364181519,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+panadol_extra,Panadol مسكن,Medicine,Restaurants,0.4859013855457306,Groceries,0.3453664779663086,0.140534907579422,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+panadol_extra,PANAD0L EXTRA,Medicine,Other,0.15604743361473083,Bills,0.09876550734043121,0.05728192627429962,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+folic_acid_600_mcg,F0LIC ACID 600 MCG,Medicine,Household,0.08139388263225555,Medicine,0.07457409054040909,0.006819792091846466,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+immulant_plus_20_cap,MLANT PLUS 20 CAP,Medicine,Groceries,0.18207833170890808,Other,0.17731158435344696,0.004766747355461121,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+folic_acid_600_mcg,FoLic AciD 600 McG,Medicine,Household,0.1731685996055603,Bills,0.11258670687675476,0.06058189272880554,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+cotton_tshirt,Cotton T Shirt,Shopping,Groceries,0.37679848074913025,Fruits & Vegetables,0.3457002639770508,0.031098216772079468,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+cotton_tshirt,Cotton T Shirt,Shopping,Groceries,0.35400623083114624,Shopping,0.29402413964271545,0.059982091188430786,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+running_shoes,Running Shoes,Shopping,Transport,0.27591079473495483,Books,0.21824616193771362,0.05766463279724121,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+phone_charger,Phone Charger,Shopping,Bills,0.28671932220458984,Household,0.14760726690292358,0.13911205530166626,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+phone_charger,Phone Charger,Shopping,Bills,0.5145776271820068,Other,0.2725282907485962,0.24204933643341064,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+phone_charger,Phone Charger,Shopping,Bills,0.4378063678741455,Shopping,0.24114356935024261,0.1966627985239029,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+cotton_tshirt,تيشيرت قطن,Shopping,Books,0.22010712325572968,Other,0.2172940969467163,0.0028130263090133667,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+cotton_tshirt,تيشيرت قطن,Shopping,Groceries,0.7062962055206299,Medicine,0.6874147653579712,0.01888144016265869,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+cotton_tshirt,تيشيرت قطن,Shopping,Books,0.522976815700531,Groceries,0.4855928122997284,0.03738400340080261,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+running_shoes,حذاء رياضي,Shopping,Transport,0.33863407373428345,Medicine,0.32472294569015503,0.013911128044128418,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+wireless_headphones,سماعات بلوتوث,Shopping,Books,0.17985627055168152,Entertainment,0.1761178970336914,0.0037383735179901123,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+wireless_headphones,سماعات بلوتوث,Shopping,Books,0.6199402213096619,Personal Care,0.5496267080307007,0.07031351327896118,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+wireless_headphones,سماعات بلوتوث,Shopping,Books,0.4764435291290283,Entertainment,0.3604356348514557,0.11600789427757263,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+phone_charger,شاحن موبايل,Shopping,Transport,0.3985605835914612,Bills,0.290188193321228,0.10837239027023315,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+phone_charger,شاحن موبايل,Shopping,Transport,0.48431187868118286,Bills,0.44581034779548645,0.03850153088569641,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+phone_charger,شاحن موبايل,Shopping,Transport,0.5230658054351807,Bills,0.4021291434764862,0.12093666195869446,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+running_shoes,Nike حذاء,Shopping,Transport,0.3552083671092987,Personal Care,0.2850838899612427,0.07012447714805603,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+wireless_headphones,Headphones سماعات,Shopping,Transport,0.17217183113098145,Other,0.1599809229373932,0.012190908193588257,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+wireless_headphones,W1RELESS HEADPH0NES,Shopping,Transport,0.03747646510601044,Books,0.025018608197569847,0.01245785690844059,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+wireless_headphones,W1RELESS HEADPH0NES,Shopping,Medicine,0.30360138416290283,Groceries,0.24569450318813324,0.05790688097476959,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+wireless_headphones,W1RELESS HEADPH0NES,Shopping,Medicine,0.17129600048065186,Personal Care,0.13536734879016876,0.03592865169048309,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+phone_charger,PH0NE CHARGER,Shopping,Books,0.12446433305740356,Transport,0.07512669265270233,0.04933764040470123,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+phone_charger,PH0NE CHARGER,Shopping,Medicine,0.535469651222229,Books,0.41747766733169556,0.11799198389053345,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+phone_charger,PH0NE CHARGER,Shopping,Medicine,0.3573928475379944,Books,0.3228379786014557,0.034554868936538696,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+mobile_bill,Mobile Phone Bill,Bills,Shopping,0.4895893931388855,Bills,0.4717486500740051,0.01784074306488037,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+internet_bill,فاتورة انترنت WE,Bills,Other,0.5284708738327026,Bills,0.523149847984314,0.005321025848388672,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+mobile_bill,Orange فاتورة موبايل,Bills,Shopping,0.463875412940979,Bills,0.44600650668144226,0.017868906259536743,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+internet_bill,Internet فاتورة شهرية,Bills,Other,0.4844377338886261,Bills,0.46669667959213257,0.01774105429649353,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+electricity_bill,ELECTR1C1TY B1LL,Bills,Medicine,0.3616938591003418,Shopping,0.33490878343582153,0.026785075664520264,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+electricity_bill,ELECTR1C1TY B1LL,Bills,Books,0.2502438426017761,Bills,0.22796443104743958,0.022279411554336548,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+internet_bill,WE 1NTERNET B1LL,Bills,Medicine,0.3449433743953705,Groceries,0.31318432092666626,0.031759053468704224,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+internet_bill,WE 1NTERNET B1LL,Bills,Medicine,0.24440744519233704,Books,0.22810755670070648,0.016299888491630554,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+playstation_game,PlayStation Game,Entertainment,Medicine,0.28367412090301514,Entertainment,0.21670477092266083,0.06696934998035431,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+playstation_game,لعبة بلايستيشن,Entertainment,Books,0.5364927649497986,Groceries,0.4994531571865082,0.037039607763290405,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+concert_ticket,تذكرة حفلة,Entertainment,Restaurants,0.17669957876205444,Other,0.12659811973571777,0.05010145902633667,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+netflix,Netflix اشتراك,Entertainment,Transport,0.3184944987297058,Entertainment,0.3183625638484955,0.00013193488121032715,mixed,mixed_language,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+netflix,NETFL1X,Entertainment,Bills,0.14150646328926086,Restaurants,0.07095221430063248,0.07055424898862839,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+netflix,NETFL1X,Entertainment,Groceries,0.30389076471328735,Medicine,0.29845255613327026,0.00543820858001709,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+netflix,NETFL1X,Entertainment,Bills,0.21994701027870178,Medicine,0.21423405408859253,0.005712956190109253,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+cinema_ticket,C1NEMA T1CKET,Entertainment,Transport,0.1046440526843071,Medicine,0.09775973856449127,0.006884314119815826,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+cinema_ticket,C1NEMA T1CKET,Entertainment,Medicine,0.5027772784233093,Shopping,0.380534827709198,0.12224245071411133,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+cinema_ticket,C1NEMA T1CKET,Entertainment,Medicine,0.38172999024391174,Books,0.25733086466789246,0.12439912557601929,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+dove_shampoo,Dove Shampoo,Personal Care,Household,0.6471319198608398,Personal Care,0.6224822998046875,0.024649620056152344,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+dove_shampoo,شامبو دوف,Personal Care,Other,0.1762007176876068,Entertainment,0.17493882775306702,0.001261889934539795,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+dove_shampoo,شامبو دوف,Personal Care,Groceries,0.5789019465446472,Medicine,0.5432018637657166,0.035700082778930664,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+dove_shampoo,شامبو دوف,Personal Care,Books,0.42523983120918274,Groceries,0.41221219301223755,0.01302763819694519,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+gillette_razor,شفرة حلاقة,Personal Care,Books,0.21753011643886566,Other,0.20970894396305084,0.00782117247581482,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+gillette_razor,شفرة حلاقة,Personal Care,Books,0.7282313108444214,Medicine,0.6550735235214233,0.07315778732299805,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+gillette_razor,شفرة حلاقة,Personal Care,Books,0.563395619392395,Medicine,0.46732115745544434,0.09607446193695068,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+dove_shampoo,شامبو D0VE,Personal Care,Transport,0.09648729860782623,Other,0.08645568788051605,0.01003161072731018,mixed,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+dove_shampoo,شامبو D0VE,Personal Care,Medicine,0.5496580600738525,Groceries,0.4374402165412903,0.11221784353256226,mixed,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+dove_shampoo,شامبو D0VE,Personal Care,Medicine,0.3601546883583069,Books,0.295110821723938,0.0650438666343689,mixed,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+gillette_razor,G1LLETTE RAZ0R,Personal Care,Transport,0.0294109545648098,Books,0.029005223885178566,0.0004057306796312332,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+gillette_razor,G1LLETTE RAZ0R,Personal Care,Medicine,0.4041438698768616,Groceries,0.31493043899536133,0.08921343088150024,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+gillette_razor,G1LLETTE RAZ0R,Personal Care,Medicine,0.2515049874782562,Groceries,0.19105744361877441,0.06044754385948181,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+document_printing,Document Printing,Other,Books,0.3009091019630432,Other,0.20461910963058472,0.0962899923324585,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+document_printing,Document Printing,Other,Books,0.2887369394302368,Household,0.26374369859695435,0.02499324083328247,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+document_printing,Document Printing,Other,Books,0.3512556552886963,Other,0.23598921298980713,0.11526644229888916,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+document_printing,طباعة مستندات,Other,Books,0.3704655170440674,Other,0.2796666622161865,0.09079885482788086,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+document_printing,طباعة مستندات,Other,Books,0.4717589020729065,Household,0.38069188594818115,0.09106701612472534,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+document_printing,طباعة مستندات,Other,Books,0.5017180442810059,Household,0.3286089599132538,0.17310908436775208,ar,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+service_fee,SERV1CE FEE,Other,Books,0.1034231185913086,Other,0.06342053413391113,0.04000258445739746,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+service_fee,SERV1CE FEE,Other,Medicine,0.4374278485774994,Personal Care,0.41477227210998535,0.022655576467514038,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+service_fee,SERV1CE FEE,Other,Books,0.2908366322517395,Personal Care,0.2781375050544739,0.012699127197265625,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+clean_code,Clean Code,Books,Household,0.21984538435935974,Books,0.12917011976242065,0.09067526459693909,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+clean_code,Clean Code,Books,Household,0.44083425402641296,Personal Care,0.37477773427963257,0.0660565197467804,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+clean_code,Clean Code,Books,Household,0.3858553171157837,Personal Care,0.2849046587944031,0.10095065832138062,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+psychology_of_money,The Psychology of Money,Books,Other,0.32059088349342346,Bills,0.28436094522476196,0.0362299382686615,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+psychology_of_money,The Psychology of Money,Books,Other,0.5226156711578369,Bills,0.41945675015449524,0.10315892100334167,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+psychology_of_money,The Psychology of Money,Books,Other,0.4717479646205902,Bills,0.3845463991165161,0.0872015655040741,en,clean,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+atomic_habits,AT0MIC HAB1TS,Books,Transport,0.031534843146800995,Books,0.01382182165980339,0.017713021486997604,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+atomic_habits,AT0MIC HAB1TS,Books,Medicine,0.34069666266441345,Shopping,0.22474904358386993,0.11594761908054352,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+atomic_habits,AT0MIC HAB1TS,Books,Medicine,0.16126522421836853,Transport,0.14892739057540894,0.012337833642959595,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+clean_code,CLEAN C0DE,Books,Household,0.3244102895259857,Personal Care,0.16138912737369537,0.16302116215229034,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,DESCRIPTION_ONLY
+clean_code,CLEAN C0DE,Books,Household,0.519390344619751,Medicine,0.4074985980987549,0.1118917465209961,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,EXAMPLE_CENTROID
+clean_code,CLEAN C0DE,Books,Household,0.49280306696891785,Personal Care,0.30046963691711426,0.1923334300518036,en,ocr_noise,sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2,HYBRID_PROTOTYPE
+chicken_breast,Chicken Breast,Groceries,Restaurants,0.8517399430274963,Fruits & Vegetables,0.8471197485923767,0.004620194435119629,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+groceries_egyptian_white_cheese,Egyptian White Cheese,Groceries,Fruits & Vegetables,0.8140977621078491,Restaurants,0.8138039112091064,0.0002938508987426758,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+groceries_egyptian_white_cheese,Egyptian White Cheese,Groceries,Restaurants,0.876168966293335,Fruits & Vegetables,0.8716115951538086,0.004557371139526367,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+groceries_egyptian_white_cheese,Egyptian White Cheese,Groceries,Restaurants,0.8688348531723022,Fruits & Vegetables,0.8623045682907104,0.006530284881591797,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+chicken_breast,صدور فراخ,Groceries,Fruits & Vegetables,0.8045417070388794,Groceries,0.8020809888839722,0.0024607181549072266,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+chicken_breast,صدور فراخ,Groceries,Books,0.8676222562789917,Household,0.865541934967041,0.0020803213119506836,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+chicken_breast,صدور فراخ,Groceries,Restaurants,0.8559867143630981,Groceries,0.8505603075027466,0.0054264068603515625,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+milk_1l,لبن كامل الدسم,Groceries,Household,0.8704298138618469,Restaurants,0.8660603761672974,0.0043694376945495605,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+groceries_8,علبة تونة,Groceries,Bills,0.8173636794090271,Medicine,0.8135352730751038,0.00382840633392334,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+groceries_8,علبة تونة,Groceries,Household,0.8751210570335388,Shopping,0.8717687129974365,0.003352344036102295,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+groceries_8,علبة تونة,Groceries,Household,0.8643911480903625,Shopping,0.8636021614074707,0.0007889866828918457,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+chicken_breast,Chicken فراخ مجمدة,Groceries,Restaurants,0.9215831756591797,Household,0.9114863872528076,0.01009678840637207,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+chicken_breast,Chicken فراخ مجمدة,Groceries,Restaurants,0.9037394523620605,Groceries,0.9027210474014282,0.0010184049606323242,mixed,mixed_language,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+milk_1l,M1LK 1L,Groceries,Medicine,0.8006196022033691,Bills,0.8001511096954346,0.0004684925079345703,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+rice_1kg,R1CE 1KG,Groceries,Medicine,0.8181400299072266,Groceries,0.8153995871543884,0.0027404427528381348,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+cucumber,Cucumber Pack,Fruits & Vegetables,Groceries,0.8150205016136169,Medicine,0.8035250902175903,0.011495411396026611,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+cucumber,Cucumber Pack,Fruits & Vegetables,Restaurants,0.8728218674659729,Groceries,0.8684083223342896,0.00441354513168335,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+cucumber,Cucumber Pack,Fruits & Vegetables,Groceries,0.8668354749679565,Restaurants,0.8601738810539246,0.006661593914031982,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+banana,موز بلدي,Fruits & Vegetables,Books,0.8948814868927002,Restaurants,0.8889207243919373,0.0059607625007629395,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+cucumber,خيار طازج,Fruits & Vegetables,Transport,0.8241641521453857,Fruits & Vegetables,0.8208226561546326,0.003341495990753174,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+cucumber,خيار طازج,Fruits & Vegetables,Groceries,0.8894444108009338,Restaurants,0.8889255523681641,0.0005188584327697754,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+cucumber,خيار طازج,Fruits & Vegetables,Groceries,0.8802348375320435,Restaurants,0.8787986636161804,0.0014361739158630371,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+banana,Banana موز,Fruits & Vegetables,Groceries,0.8823034167289734,Fruits & Vegetables,0.88081294298172,0.001490473747253418,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+tomatoes,T0MAT0ES,Fruits & Vegetables,Entertainment,0.8116589784622192,Fruits & Vegetables,0.8103724718093872,0.0012865066528320312,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+tomatoes,T0MAT0ES,Fruits & Vegetables,Books,0.8698370456695557,Shopping,0.8650214672088623,0.004815578460693359,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+tomatoes,T0MAT0ES,Fruits & Vegetables,Books,0.8596171140670776,Shopping,0.8581276535987854,0.0014894604682922363,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+apples,تفـاح,Fruits & Vegetables,Entertainment,0.8248790502548218,Restaurants,0.8244798183441162,0.0003992319107055664,ar,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+apples,تفـاح,Fruits & Vegetables,Books,0.8686412572860718,Fruits & Vegetables,0.8605971336364746,0.008044123649597168,ar,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+apples,تفـاح,Fruits & Vegetables,Books,0.8718492984771729,Restaurants,0.862268328666687,0.00958096981048584,ar,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+coffee,Cappuccino,Restaurants,Fruits & Vegetables,0.8547899127006531,Personal Care,0.8438248634338379,0.010965049266815186,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+restaurants_kfc_family_meal,KFC Family Meal,Restaurants,Groceries,0.8184405565261841,Restaurants,0.8168687224388123,0.0015718340873718262,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+restaurants_kfc_family_meal,KFC Family Meal,Restaurants,Groceries,0.8677940964698792,Restaurants,0.8669075965881348,0.0008864998817443848,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+margherita_pizza,بيتزا مارجريتا,Restaurants,Transport,0.7636438608169556,Restaurants,0.7609742283821106,0.0026696324348449707,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+coffee,قهوة لاتيه,Restaurants,Groceries,0.8844062089920044,Restaurants,0.8843159675598145,9.02414321899414e-05,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+restaurants_32,ساندوتش شاورما,Restaurants,Entertainment,0.7575697898864746,Groceries,0.7541641592979431,0.003405630588531494,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+restaurants_32,ساندوتش شاورما,Restaurants,Books,0.8335285782814026,Household,0.8162105083465576,0.01731806993484497,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+restaurants_32,ساندوتش شاورما,Restaurants,Books,0.8076384663581848,Groceries,0.8063766360282898,0.0012618303298950195,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+coffee,Coffee قهوة,Restaurants,Fruits & Vegetables,0.903626561164856,Groceries,0.9021551609039307,0.001471400260925293,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+mcchicken_meal,McCh1cken MeaI,Restaurants,Entertainment,0.8136053085327148,Restaurants,0.8130701780319214,0.000535130500793457,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+mcchicken_meal,McCh1cken MeaI,Restaurants,Groceries,0.8876290321350098,Books,0.8857495784759521,0.0018794536590576172,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+margherita_pizza,P1ZZA MARGHER1TA,Restaurants,Personal Care,0.797275960445404,Groceries,0.7922462224960327,0.005029737949371338,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+margherita_pizza,P1ZZA MARGHER1TA,Restaurants,Groceries,0.8650370836257935,Restaurants,0.8583054542541504,0.006731629371643066,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+margherita_pizza,P1ZZA MARGHER1TA,Restaurants,Groceries,0.8533725738525391,Personal Care,0.8478632569313049,0.005509316921234131,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+metro_ticket,Cairo Metro Ticket,Transport,Entertainment,0.8497762680053711,Transport,0.844685435295105,0.005090832710266113,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+gasoline_92,Gasoline 92,Transport,Groceries,0.8460805416107178,Fruits & Vegetables,0.8456009030342102,0.00047963857650756836,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+gasoline_92,Gasoline 92,Transport,Shopping,0.8346884250640869,Household,0.8344062566757202,0.0002821683883666992,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+careem_ride,مشوار كريم,Transport,Personal Care,0.8282487392425537,Transport,0.8282393217086792,9.417533874511719e-06,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+careem_ride,مشوار كريم,Transport,Books,0.8881710767745972,Restaurants,0.8809530735015869,0.007218003273010254,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+careem_ride,مشوار كريم,Transport,Personal Care,0.8764258623123169,Transport,0.8721027970314026,0.004323065280914307,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+metro_ticket,تذكرة مترو,Transport,Entertainment,0.8912330865859985,Transport,0.8879131078720093,0.003319978713989258,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+gasoline_92,بنزين 92,Transport,Books,0.8814367055892944,Groceries,0.8770098686218262,0.004426836967468262,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+gasoline_92,بنزين 92,Transport,Groceries,0.8582272529602051,Transport,0.8581569790840149,7.027387619018555e-05,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+uber_trip,UBER TR1P,Transport,Groceries,0.859259307384491,Books,0.8547636866569519,0.0044956207275390625,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+uber_trip,UBER TR1P,Transport,Medicine,0.8514758348464966,Transport,0.8485597968101501,0.0029160380363464355,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+careem_ride,CAR EEM R1DE,Transport,Groceries,0.8755069971084595,Shopping,0.8710309863090515,0.004476010799407959,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+persil_gel,Persil Gel,Household,Personal Care,0.8124900460243225,Medicine,0.8073576092720032,0.005132436752319336,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+persil_gel,Persil Gel,Household,Personal Care,0.871009111404419,Household,0.8664406538009644,0.00456845760345459,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+persil_gel,Persil Gel,Household,Personal Care,0.8632696866989136,Household,0.8569322228431702,0.006337463855743408,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+clorox_bleach,كلور مبيض,Household,Entertainment,0.7711167931556702,Personal Care,0.7642530798912048,0.006863713264465332,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+clorox_bleach,كلور مبيض,Household,Personal Care,0.8162742853164673,Books,0.815991997718811,0.00028228759765625,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+fairy_dish_liquid,Fairy صابون أطباق,Household,Personal Care,0.8618640899658203,Restaurants,0.8510478734970093,0.010816216468811035,mixed,mixed_language,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+fairy_dish_liquid,Fairy صابون أطباق,Household,Restaurants,0.9193606376647949,Groceries,0.9154066443443298,0.003953993320465088,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+dettol_floor_cleaner,DettoI Floor C1eaner,Household,Personal Care,0.8164727687835693,Entertainment,0.8136813640594482,0.0027914047241210938,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+dettol_floor_cleaner,DettoI Floor C1eaner,Household,Books,0.8841380476951599,Groceries,0.8784891963005066,0.00564885139465332,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+persil_gel,PersiI GeI,Household,Bills,0.8002505302429199,Entertainment,0.799826979637146,0.0004235506057739258,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+persil_gel,PersiI GeI,Household,Books,0.8744563460350037,Groceries,0.8655244708061218,0.008931875228881836,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+persil_gel,PersiI GeI,Household,Books,0.8548760414123535,Groceries,0.853346586227417,0.0015294551849365234,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+panadol_extra,Panadol Extra,Medicine,Fruits & Vegetables,0.8757779002189636,Medicine,0.8717981576919556,0.003979742527008057,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+brufen_400,Brufen 400,Medicine,Personal Care,0.7930622100830078,Transport,0.7895489931106567,0.0035132169723510742,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+brufen_400,Brufen 400,Medicine,Shopping,0.8633000254631042,Groceries,0.8562082052230835,0.007091820240020752,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+brufen_400,Brufen 400,Medicine,Shopping,0.845470666885376,Books,0.8432619571685791,0.002208709716796875,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+folic_acid_600_mcg,Folic Acid 600 MCG,Medicine,Groceries,0.8775734901428223,Household,0.8771375417709351,0.00043594837188720703,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+panadol_extra,بنادول إكسترا,Medicine,Entertainment,0.786501944065094,Fruits & Vegetables,0.7843047976493835,0.0021971464157104492,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+panadol_extra,بنادول إكسترا,Medicine,Household,0.8465728759765625,Groceries,0.8417217135429382,0.004851162433624268,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+brufen_400,بروفين 400,Medicine,Personal Care,0.8046639561653137,Transport,0.8029488325119019,0.0017151236534118652,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+folic_acid_600_mcg,حمض الفوليك,Medicine,Household,0.8567492365837097,Medicine,0.8424623012542725,0.014286935329437256,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+panadol_extra,Panadol مسكن,Medicine,Transport,0.8153490424156189,Fruits & Vegetables,0.811771810054779,0.0035772323608398438,mixed,mixed_language,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+panadol_extra,Panadol مسكن,Medicine,Books,0.8858376145362854,Household,0.884859561920166,0.0009780526161193848,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+panadol_extra,Panadol مسكن,Medicine,Household,0.8689641952514648,Groceries,0.867672324180603,0.0012918710708618164,mixed,mixed_language,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+panadol_extra,PANAD0L EXTRA,Medicine,Groceries,0.8045629858970642,Fruits & Vegetables,0.7985233068466187,0.006039679050445557,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+panadol_extra,PANAD0L EXTRA,Medicine,Fruits & Vegetables,0.861349880695343,Household,0.8578938245773315,0.0034560561180114746,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+panadol_extra,PANAD0L EXTRA,Medicine,Groceries,0.8556714653968811,Fruits & Vegetables,0.8490884304046631,0.006583034992218018,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+folic_acid_600_mcg,F0LIC ACID 600 MCG,Medicine,Household,0.864919900894165,Groceries,0.8613555431365967,0.0035643577575683594,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+immulant_plus_20_cap,MLANT PLUS 20 CAP,Medicine,Groceries,0.7967490553855896,Medicine,0.7958478927612305,0.0009011626243591309,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+folic_acid_600_mcg,FoLic AciD 600 McG,Medicine,Household,0.8726823329925537,Groceries,0.869065523147583,0.003616809844970703,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+cotton_tshirt,Cotton T Shirt,Shopping,Groceries,0.8580895662307739,Fruits & Vegetables,0.8546546697616577,0.003434896469116211,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+running_shoes,Running Shoes,Shopping,Personal Care,0.8385129570960999,Shopping,0.8376723527908325,0.000840604305267334,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+wireless_headphones,Wireless Headphones,Shopping,Entertainment,0.8016121983528137,Bills,0.7981812953948975,0.0034309029579162598,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+phone_charger,Phone Charger,Shopping,Bills,0.8240969181060791,Shopping,0.8140103220939636,0.010086596012115479,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+cotton_tshirt,تيشيرت قطن,Shopping,Transport,0.837655782699585,Restaurants,0.8129897713661194,0.024666011333465576,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+cotton_tshirt,تيشيرت قطن,Shopping,Transport,0.8850685358047485,Groceries,0.8841203451156616,0.0009481906890869141,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+cotton_tshirt,تيشيرت قطن,Shopping,Transport,0.8836241960525513,Groceries,0.8733441829681396,0.010280013084411621,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+running_shoes,حذاء رياضي,Shopping,Books,0.8939926624298096,Shopping,0.8796762824058533,0.014316380023956299,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+wireless_headphones,سماعات بلوتوث,Shopping,Entertainment,0.8101077079772949,Bills,0.804003119468689,0.006104588508605957,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+wireless_headphones,سماعات بلوتوث,Shopping,Books,0.8668268918991089,Household,0.8581452369689941,0.008681654930114746,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+wireless_headphones,سماعات بلوتوث,Shopping,Entertainment,0.8514960408210754,Books,0.8497761487960815,0.0017198920249938965,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+phone_charger,شاحن موبايل,Shopping,Bills,0.7992933988571167,Transport,0.7935882806777954,0.005705118179321289,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+running_shoes,Nike حذاء,Shopping,Personal Care,0.9011228084564209,Books,0.9006474614143372,0.00047534704208374023,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+wireless_headphones,Headphones سماعات,Shopping,Entertainment,0.8390629887580872,Personal Care,0.8380300402641296,0.0010329484939575195,mixed,mixed_language,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+phone_charger,PH0NE CHARGER,Shopping,Bills,0.7836016416549683,Entertainment,0.781705379486084,0.0018962621688842773,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+phone_charger,PH0NE CHARGER,Shopping,Personal Care,0.8335403203964233,Books,0.8314777612686157,0.002062559127807617,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+electricity_bill,ELECTR1C1TY B1LL,Bills,Groceries,0.8705431818962097,Books,0.8674213886260986,0.003121793270111084,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+electricity_bill,ELECTR1C1TY B1LL,Bills,Shopping,0.865644633769989,Books,0.8624886274337769,0.003156006336212158,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+internet_bill,WE 1NTERNET B1LL,Bills,Groceries,0.862140417098999,Books,0.8583486676216125,0.0037917494773864746,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+internet_bill,WE 1NTERNET B1LL,Bills,Groceries,0.8526337146759033,Books,0.8450766205787659,0.007557094097137451,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+netflix,Netflix,Entertainment,Books,0.8463732004165649,Restaurants,0.844674289226532,0.001698911190032959,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+playstation_game,PlayStation Game,Entertainment,Shopping,0.8514093160629272,Books,0.8468852043151855,0.004524111747741699,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+concert_ticket,Concert Ticket,Entertainment,Transport,0.8387138843536377,Entertainment,0.8381866216659546,0.0005272626876831055,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+playstation_game,لعبة بلايستيشن,Entertainment,Shopping,0.8793810606002808,Books,0.8788398504257202,0.0005412101745605469,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+playstation_game,لعبة بلايستيشن,Entertainment,Shopping,0.8641603589057922,Entertainment,0.8612158298492432,0.0029445290565490723,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+concert_ticket,تذكرة حفلة,Entertainment,Transport,0.9014878273010254,Shopping,0.8898406028747559,0.011647224426269531,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+netflix,Netflix اشتراك,Entertainment,Restaurants,0.8805880546569824,Books,0.8783003091812134,0.002287745475769043,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+netflix,NETFL1X,Entertainment,Groceries,0.8400867581367493,Household,0.8378527760505676,0.0022339820861816406,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+netflix,NETFL1X,Entertainment,Shopping,0.8309566974639893,Groceries,0.82948899269104,0.0014677047729492188,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+cinema_ticket,C1NEMA T1CKET,Entertainment,Groceries,0.8604270815849304,Shopping,0.8564050197601318,0.004022061824798584,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+cinema_ticket,C1NEMA T1CKET,Entertainment,Shopping,0.8499706983566284,Groceries,0.8478641510009766,0.0021065473556518555,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+gillette_razor,Gillette Razor,Personal Care,Household,0.8611554503440857,Personal Care,0.8572900295257568,0.0038654208183288574,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+dove_shampoo,شامبو دوف,Personal Care,Household,0.8842681646347046,Books,0.8810406923294067,0.0032274723052978516,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+nivea_face_cream,كريم نيفيا للوجه,Personal Care,Household,0.874377965927124,Medicine,0.866605818271637,0.0077721476554870605,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+haircut,قص شعر,Personal Care,Books,0.8841431140899658,Shopping,0.8812505006790161,0.002892613410949707,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+nivea_face_cream,Nivea كريم بشرة,Personal Care,Household,0.9098551273345947,Medicine,0.9031270742416382,0.006728053092956543,mixed,mixed_language,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+dove_shampoo,شامبو D0VE,Personal Care,Household,0.9012331962585449,Personal Care,0.8980770111083984,0.0031561851501464844,mixed,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+gillette_razor,G1LLETTE RAZ0R,Personal Care,Entertainment,0.8023245334625244,Shopping,0.7963844537734985,0.005940079689025879,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+gillette_razor,G1LLETTE RAZ0R,Personal Care,Groceries,0.8558713793754578,Books,0.8506988286972046,0.005172550678253174,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+gillette_razor,G1LLETTE RAZ0R,Personal Care,Groceries,0.8485603928565979,Shopping,0.8459445238113403,0.0026158690452575684,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+charity_donation,Charity Donation,Other,Shopping,0.831411600112915,Restaurants,0.8281721472740173,0.003239452838897705,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+document_printing,Document Printing,Other,Bills,0.792273759841919,Medicine,0.7914949059486389,0.0007788538932800293,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+document_printing,Document Printing,Other,Books,0.8444887399673462,Shopping,0.8401763439178467,0.004312396049499512,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+document_printing,Document Printing,Other,Books,0.8394515514373779,Shopping,0.8340086936950684,0.00544285774230957,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+service_fee,رسوم خدمة,Other,Bills,0.8383516073226929,Other,0.8372224569320679,0.001129150390625,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+service_fee,رسوم خدمة,Other,Bills,0.8892394304275513,Other,0.882483720779419,0.006755709648132324,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+service_fee,رسوم خدمة,Other,Bills,0.883581817150116,Other,0.8818454742431641,0.0017363429069519043,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+charity_donation,تبرع خيري,Other,Books,0.8939510583877563,Household,0.8834688067436218,0.010482251644134521,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+document_printing,طباعة مستندات,Other,Books,0.8766131401062012,Shopping,0.8671875,0.009425640106201172,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+document_printing,طباعة مستندات,Other,Books,0.8751596212387085,Other,0.8673021793365479,0.007857441902160645,ar,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+misc_expense,مصاريف متنوعة,Other,Books,0.8849957585334778,Bills,0.884446382522583,0.0005493760108947754,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+misc_expense,M1SC EXPENSE,Other,Entertainment,0.7995996475219727,Other,0.7982778549194336,0.0013217926025390625,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+misc_expense,M1SC EXPENSE,Other,Medicine,0.8572361469268799,Restaurants,0.8473892211914062,0.009846925735473633,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+misc_expense,M1SC EXPENSE,Other,Medicine,0.84745192527771,Other,0.8427917957305908,0.004660129547119141,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+atomic_habits,Atomic Habits,Books,Entertainment,0.8176128268241882,Restaurants,0.8147156238555908,0.002897202968597412,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+atomic_habits,Atomic Habits,Books,Shopping,0.8623331785202026,Books,0.8608641624450684,0.0014690160751342773,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+atomic_habits,Atomic Habits,Books,Shopping,0.8594377040863037,Books,0.8578315377235413,0.0016061663627624512,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+clean_code,Clean Code,Books,Personal Care,0.8036495447158813,Household,0.8020480275154114,0.0016015172004699707,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+clean_code,Clean Code,Books,Household,0.8642022609710693,Personal Care,0.8510605096817017,0.013141751289367676,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+clean_code,Clean Code,Books,Household,0.8590812683105469,Personal Care,0.8485071063041687,0.010574162006378174,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+psychology_of_money,The Psychology of Money,Books,Bills,0.8184994459152222,Other,0.8033473491668701,0.01515209674835205,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+psychology_of_money,The Psychology of Money,Books,Other,0.8710284233093262,Books,0.8707626461982727,0.0002657771110534668,en,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+psychology_of_money,The Psychology of Money,Books,Bills,0.8636000156402588,Other,0.8586407899856567,0.004959225654602051,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+pragmatic_programmer,The Pragmatic Programmer,Books,Bills,0.7938602566719055,Entertainment,0.7905563116073608,0.0033039450645446777,en,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+pragmatic_programmer,The Pragmatic Programmer,Books,Restaurants,0.8457479476928711,Shopping,0.8421125411987305,0.003635406494140625,en,clean,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+atomic_habits,العادات الذرية,Books,Personal Care,0.8182516098022461,Restaurants,0.8176242113113403,0.0006273984909057617,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+art_of_not_caring,كتاب فن اللامبالاة,Books,Personal Care,0.8086768984794617,Books,0.8077800273895264,0.0008968710899353027,ar,clean,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+awlad_haretna,رواية أولاد حارتنا,Books,Restaurants,0.8514612913131714,Books,0.8476799130439758,0.0037813782691955566,ar,clean,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+atomic_habits,Atomic Habits نسخة عربية,Books,Transport,0.8335304856300354,Shopping,0.819608211517334,0.013922274112701416,mixed,mixed_language,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+atomic_habits,AT0MIC HAB1TS,Books,Medicine,0.8001348972320557,Entertainment,0.7999725341796875,0.00016236305236816406,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+atomic_habits,AT0MIC HAB1TS,Books,Shopping,0.8519921898841858,Groceries,0.8498961925506592,0.0020959973335266113,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+atomic_habits,AT0MIC HAB1TS,Books,Medicine,0.8484511375427246,Shopping,0.8452104330062866,0.0032407045364379883,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE
+clean_code,CLEAN C0DE,Books,Personal Care,0.8024299144744873,Household,0.80039381980896,0.0020360946655273438,en,ocr_noise,intfloat/multilingual-e5-small,DESCRIPTION_ONLY
+clean_code,CLEAN C0DE,Books,Household,0.8714385032653809,Personal Care,0.8568898439407349,0.014548659324645996,en,ocr_noise,intfloat/multilingual-e5-small,EXAMPLE_CENTROID
+clean_code,CLEAN C0DE,Books,Household,0.8619592785835266,Personal Care,0.8508708477020264,0.011088430881500244,en,ocr_noise,intfloat/multilingual-e5-small,HYBRID_PROTOTYPE

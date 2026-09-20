@@ -1,0 +1,147 @@
+text,category,language,variant_type
+Chicken Breast,Groceries,en,clean
+Milk 1L,Groceries,en,clean
+Rice 1KG,Groceries,en,clean
+Egyptian White Cheese,Groceries,en,clean
+صدور فراخ,Groceries,ar,clean
+لبن كامل الدسم,Groceries,ar,clean
+كيس أرز 1 كيلو,Groceries,ar,clean
+علبة تونة,Groceries,ar,clean
+Fresh Milk لبن,Groceries,mixed,mixed_language
+Chicken فراخ مجمدة,Groceries,mixed,mixed_language
+M1LK 1L,Groceries,en,ocr_noise
+R1CE 1KG,Groceries,en,ocr_noise
+Banana,Fruits & Vegetables,en,clean
+Fresh Tomatoes,Fruits & Vegetables,en,clean
+Green Apples,Fruits & Vegetables,en,clean
+Cucumber Pack,Fruits & Vegetables,en,clean
+طماطم,Fruits & Vegetables,ar,clean
+تفاح,Fruits & Vegetables,ar,clean
+موز بلدي,Fruits & Vegetables,ar,clean
+خيار طازج,Fruits & Vegetables,ar,clean
+Banana موز,Fruits & Vegetables,mixed,mixed_language
+Fresh طماطم,Fruits & Vegetables,mixed,mixed_language
+T0MAT0ES,Fruits & Vegetables,en,ocr_noise
+تفـاح,Fruits & Vegetables,ar,ocr_noise
+McChicken Meal,Restaurants,en,clean
+Margherita Pizza,Restaurants,en,clean
+Cappuccino,Restaurants,en,clean
+KFC Family Meal,Restaurants,en,clean
+بيتزا مارجريتا,Restaurants,ar,clean
+وجبة برجر,Restaurants,ar,clean
+قهوة لاتيه,Restaurants,ar,clean
+ساندوتش شاورما,Restaurants,ar,clean
+Coffee قهوة,Restaurants,mixed,mixed_language
+Burger وجبة,Restaurants,mixed,mixed_language
+McCh1cken MeaI,Restaurants,en,ocr_noise
+P1ZZA MARGHER1TA,Restaurants,en,ocr_noise
+Uber Trip,Transport,en,clean
+Careem Ride,Transport,en,clean
+Cairo Metro Ticket,Transport,en,clean
+Gasoline 92,Transport,en,clean
+رحلة أوبر,Transport,ar,clean
+مشوار كريم,Transport,ar,clean
+تذكرة مترو,Transport,ar,clean
+بنزين 92,Transport,ar,clean
+Uber مشوار,Transport,mixed,mixed_language
+Careem رحلة,Transport,mixed,mixed_language
+UBER TR1P,Transport,en,ocr_noise
+CAR EEM R1DE,Transport,en,ocr_noise
+Dettol Floor Cleaner,Household,en,clean
+Fairy Dishwashing Liquid,Household,en,clean
+Persil Gel,Household,en,clean
+Clorox Bleach,Household,en,clean
+منظف أرضيات ديتول,Household,ar,clean
+سائل غسيل أطباق,Household,ar,clean
+مسحوق غسيل برسيل,Household,ar,clean
+كلور مبيض,Household,ar,clean
+Dettol منظف أرضيات,Household,mixed,mixed_language
+Fairy صابون أطباق,Household,mixed,mixed_language
+DettoI Floor C1eaner,Household,en,ocr_noise
+PersiI GeI,Household,en,ocr_noise
+Panadol Extra,Medicine,en,clean
+Brufen 400,Medicine,en,clean
+Folic Acid 600 MCG,Medicine,en,clean
+Immulant Plus 20 Cap,Medicine,en,clean
+بنادول إكسترا,Medicine,ar,clean
+بروفين 400,Medicine,ar,clean
+حمض الفوليك,Medicine,ar,clean
+فيتامين سي,Medicine,ar,clean
+Panadol مسكن,Medicine,mixed,mixed_language
+Vitamin D فيتامين,Medicine,mixed,mixed_language
+PANAD0L EXTRA,Medicine,en,ocr_noise
+F0LIC ACID 600 MCG,Medicine,en,ocr_noise
+MLANT PLUS 20 CAP,Medicine,en,ocr_noise
+FoLic AciD 600 McG,Medicine,en,ocr_noise
+Cotton T Shirt,Shopping,en,clean
+Running Shoes,Shopping,en,clean
+Wireless Headphones,Shopping,en,clean
+Phone Charger,Shopping,en,clean
+تيشيرت قطن,Shopping,ar,clean
+حذاء رياضي,Shopping,ar,clean
+سماعات بلوتوث,Shopping,ar,clean
+شاحن موبايل,Shopping,ar,clean
+Nike حذاء,Shopping,mixed,mixed_language
+Headphones سماعات,Shopping,mixed,mixed_language
+W1RELESS HEADPH0NES,Shopping,en,ocr_noise
+PH0NE CHARGER,Shopping,en,ocr_noise
+Electricity Bill,Bills,en,clean
+WE Internet Bill,Bills,en,clean
+Water Utility Bill,Bills,en,clean
+Mobile Phone Bill,Bills,en,clean
+فاتورة كهرباء,Bills,ar,clean
+فاتورة انترنت WE,Bills,mixed,mixed_language
+فاتورة مياه,Bills,ar,clean
+فاتورة غاز,Bills,ar,clean
+Orange فاتورة موبايل,Bills,mixed,mixed_language
+Internet فاتورة شهرية,Bills,mixed,mixed_language
+ELECTR1C1TY B1LL,Bills,en,ocr_noise
+WE 1NTERNET B1LL,Bills,en,ocr_noise
+Netflix,Entertainment,en,clean
+Cinema Ticket,Entertainment,en,clean
+PlayStation Game,Entertainment,en,clean
+Concert Ticket,Entertainment,en,clean
+تذكرة سينما,Entertainment,ar,clean
+اشتراك مشاهدة أفلام,Entertainment,ar,clean
+لعبة بلايستيشن,Entertainment,ar,clean
+تذكرة حفلة,Entertainment,ar,clean
+Netflix اشتراك,Entertainment,mixed,mixed_language
+Cinema تذكرة,Entertainment,mixed,mixed_language
+NETFL1X,Entertainment,en,ocr_noise
+C1NEMA T1CKET,Entertainment,en,ocr_noise
+Dove Shampoo,Personal Care,en,clean
+Nivea Face Cream,Personal Care,en,clean
+Gillette Razor,Personal Care,en,clean
+Haircut,Personal Care,en,clean
+شامبو دوف,Personal Care,ar,clean
+كريم نيفيا للوجه,Personal Care,ar,clean
+شفرة حلاقة,Personal Care,ar,clean
+قص شعر,Personal Care,ar,clean
+Shampoo شامبو,Personal Care,mixed,mixed_language
+Nivea كريم بشرة,Personal Care,mixed,mixed_language
+شامبو D0VE,Personal Care,mixed,ocr_noise
+G1LLETTE RAZ0R,Personal Care,en,ocr_noise
+Service Fee,Other,en,clean
+Charity Donation,Other,en,clean
+Document Printing,Other,en,clean
+Delivery Fee,Other,en,clean
+رسوم خدمة,Other,ar,clean
+تبرع خيري,Other,ar,clean
+طباعة مستندات,Other,ar,clean
+مصاريف متنوعة,Other,ar,clean
+Delivery رسوم,Other,mixed,mixed_language
+Service مصاريف,Other,mixed,mixed_language
+SERV1CE FEE,Other,en,ocr_noise
+M1SC EXPENSE,Other,en,ocr_noise
+Atomic Habits,Books,en,clean
+Clean Code,Books,en,clean
+The Psychology of Money,Books,en,clean
+The Pragmatic Programmer,Books,en,clean
+العادات الذرية,Books,ar,clean
+كتاب فن اللامبالاة,Books,ar,clean
+رواية أولاد حارتنا,Books,ar,clean
+كتاب تعلم بايثون,Books,ar,clean
+Clean Code كتاب,Books,mixed,mixed_language
+Atomic Habits نسخة عربية,Books,mixed,mixed_language
+AT0MIC HAB1TS,Books,en,ocr_noise
+CLEAN C0DE,Books,en,ocr_noise

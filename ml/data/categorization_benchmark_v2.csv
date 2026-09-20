@@ -1,0 +1,147 @@
+canonical_id,text,category,language,variant_type
+chicken_breast,Chicken Breast,Groceries,en,clean
+milk_1l,Milk 1L,Groceries,en,clean
+rice_1kg,Rice 1KG,Groceries,en,clean
+groceries_egyptian_white_cheese,Egyptian White Cheese,Groceries,en,clean
+chicken_breast,صدور فراخ,Groceries,ar,clean
+milk_1l,لبن كامل الدسم,Groceries,ar,clean
+rice_1kg,كيس أرز 1 كيلو,Groceries,ar,clean
+groceries_8,علبة تونة,Groceries,ar,clean
+milk_1l,Fresh Milk لبن,Groceries,mixed,mixed_language
+chicken_breast,Chicken فراخ مجمدة,Groceries,mixed,mixed_language
+milk_1l,M1LK 1L,Groceries,en,ocr_noise
+rice_1kg,R1CE 1KG,Groceries,en,ocr_noise
+banana,Banana,Fruits & Vegetables,en,clean
+tomatoes,Fresh Tomatoes,Fruits & Vegetables,en,clean
+apples,Green Apples,Fruits & Vegetables,en,clean
+cucumber,Cucumber Pack,Fruits & Vegetables,en,clean
+tomatoes,طماطم,Fruits & Vegetables,ar,clean
+apples,تفاح,Fruits & Vegetables,ar,clean
+banana,موز بلدي,Fruits & Vegetables,ar,clean
+cucumber,خيار طازج,Fruits & Vegetables,ar,clean
+banana,Banana موز,Fruits & Vegetables,mixed,mixed_language
+tomatoes,Fresh طماطم,Fruits & Vegetables,mixed,mixed_language
+tomatoes,T0MAT0ES,Fruits & Vegetables,en,ocr_noise
+apples,تفـاح,Fruits & Vegetables,ar,ocr_noise
+mcchicken_meal,McChicken Meal,Restaurants,en,clean
+margherita_pizza,Margherita Pizza,Restaurants,en,clean
+coffee,Cappuccino,Restaurants,en,clean
+restaurants_kfc_family_meal,KFC Family Meal,Restaurants,en,clean
+margherita_pizza,بيتزا مارجريتا,Restaurants,ar,clean
+burger_meal,وجبة برجر,Restaurants,ar,clean
+coffee,قهوة لاتيه,Restaurants,ar,clean
+restaurants_32,ساندوتش شاورما,Restaurants,ar,clean
+coffee,Coffee قهوة,Restaurants,mixed,mixed_language
+burger_meal,Burger وجبة,Restaurants,mixed,mixed_language
+mcchicken_meal,McCh1cken MeaI,Restaurants,en,ocr_noise
+margherita_pizza,P1ZZA MARGHER1TA,Restaurants,en,ocr_noise
+uber_trip,Uber Trip,Transport,en,clean
+careem_ride,Careem Ride,Transport,en,clean
+metro_ticket,Cairo Metro Ticket,Transport,en,clean
+gasoline_92,Gasoline 92,Transport,en,clean
+uber_trip,رحلة أوبر,Transport,ar,clean
+careem_ride,مشوار كريم,Transport,ar,clean
+metro_ticket,تذكرة مترو,Transport,ar,clean
+gasoline_92,بنزين 92,Transport,ar,clean
+uber_trip,Uber مشوار,Transport,mixed,mixed_language
+careem_ride,Careem رحلة,Transport,mixed,mixed_language
+uber_trip,UBER TR1P,Transport,en,ocr_noise
+careem_ride,CAR EEM R1DE,Transport,en,ocr_noise
+dettol_floor_cleaner,Dettol Floor Cleaner,Household,en,clean
+fairy_dish_liquid,Fairy Dishwashing Liquid,Household,en,clean
+persil_gel,Persil Gel,Household,en,clean
+clorox_bleach,Clorox Bleach,Household,en,clean
+dettol_floor_cleaner,منظف أرضيات ديتول,Household,ar,clean
+fairy_dish_liquid,سائل غسيل أطباق,Household,ar,clean
+persil_gel,مسحوق غسيل برسيل,Household,ar,clean
+clorox_bleach,كلور مبيض,Household,ar,clean
+dettol_floor_cleaner,Dettol منظف أرضيات,Household,mixed,mixed_language
+fairy_dish_liquid,Fairy صابون أطباق,Household,mixed,mixed_language
+dettol_floor_cleaner,DettoI Floor C1eaner,Household,en,ocr_noise
+persil_gel,PersiI GeI,Household,en,ocr_noise
+panadol_extra,Panadol Extra,Medicine,en,clean
+brufen_400,Brufen 400,Medicine,en,clean
+folic_acid_600_mcg,Folic Acid 600 MCG,Medicine,en,clean
+immulant_plus_20_cap,Immulant Plus 20 Cap,Medicine,en,clean
+panadol_extra,بنادول إكسترا,Medicine,ar,clean
+brufen_400,بروفين 400,Medicine,ar,clean
+folic_acid_600_mcg,حمض الفوليك,Medicine,ar,clean
+medicine_68,فيتامين سي,Medicine,ar,clean
+panadol_extra,Panadol مسكن,Medicine,mixed,mixed_language
+vitamin_d,Vitamin D فيتامين,Medicine,mixed,mixed_language
+panadol_extra,PANAD0L EXTRA,Medicine,en,ocr_noise
+folic_acid_600_mcg,F0LIC ACID 600 MCG,Medicine,en,ocr_noise
+immulant_plus_20_cap,MLANT PLUS 20 CAP,Medicine,en,ocr_noise
+folic_acid_600_mcg,FoLic AciD 600 McG,Medicine,en,ocr_noise
+cotton_tshirt,Cotton T Shirt,Shopping,en,clean
+running_shoes,Running Shoes,Shopping,en,clean
+wireless_headphones,Wireless Headphones,Shopping,en,clean
+phone_charger,Phone Charger,Shopping,en,clean
+cotton_tshirt,تيشيرت قطن,Shopping,ar,clean
+running_shoes,حذاء رياضي,Shopping,ar,clean
+wireless_headphones,سماعات بلوتوث,Shopping,ar,clean
+phone_charger,شاحن موبايل,Shopping,ar,clean
+running_shoes,Nike حذاء,Shopping,mixed,mixed_language
+wireless_headphones,Headphones سماعات,Shopping,mixed,mixed_language
+wireless_headphones,W1RELESS HEADPH0NES,Shopping,en,ocr_noise
+phone_charger,PH0NE CHARGER,Shopping,en,ocr_noise
+electricity_bill,Electricity Bill,Bills,en,clean
+internet_bill,WE Internet Bill,Bills,en,clean
+water_bill,Water Utility Bill,Bills,en,clean
+mobile_bill,Mobile Phone Bill,Bills,en,clean
+electricity_bill,فاتورة كهرباء,Bills,ar,clean
+internet_bill,فاتورة انترنت WE,Bills,mixed,mixed_language
+water_bill,فاتورة مياه,Bills,ar,clean
+gas_bill,فاتورة غاز,Bills,ar,clean
+mobile_bill,Orange فاتورة موبايل,Bills,mixed,mixed_language
+internet_bill,Internet فاتورة شهرية,Bills,mixed,mixed_language
+electricity_bill,ELECTR1C1TY B1LL,Bills,en,ocr_noise
+internet_bill,WE 1NTERNET B1LL,Bills,en,ocr_noise
+netflix,Netflix,Entertainment,en,clean
+cinema_ticket,Cinema Ticket,Entertainment,en,clean
+playstation_game,PlayStation Game,Entertainment,en,clean
+concert_ticket,Concert Ticket,Entertainment,en,clean
+cinema_ticket,تذكرة سينما,Entertainment,ar,clean
+netflix,اشتراك مشاهدة أفلام,Entertainment,ar,clean
+playstation_game,لعبة بلايستيشن,Entertainment,ar,clean
+concert_ticket,تذكرة حفلة,Entertainment,ar,clean
+netflix,Netflix اشتراك,Entertainment,mixed,mixed_language
+cinema_ticket,Cinema تذكرة,Entertainment,mixed,mixed_language
+netflix,NETFL1X,Entertainment,en,ocr_noise
+cinema_ticket,C1NEMA T1CKET,Entertainment,en,ocr_noise
+dove_shampoo,Dove Shampoo,Personal Care,en,clean
+nivea_face_cream,Nivea Face Cream,Personal Care,en,clean
+gillette_razor,Gillette Razor,Personal Care,en,clean
+haircut,Haircut,Personal Care,en,clean
+dove_shampoo,شامبو دوف,Personal Care,ar,clean
+nivea_face_cream,كريم نيفيا للوجه,Personal Care,ar,clean
+gillette_razor,شفرة حلاقة,Personal Care,ar,clean
+haircut,قص شعر,Personal Care,ar,clean
+dove_shampoo,Shampoo شامبو,Personal Care,mixed,mixed_language
+nivea_face_cream,Nivea كريم بشرة,Personal Care,mixed,mixed_language
+dove_shampoo,شامبو D0VE,Personal Care,mixed,ocr_noise
+gillette_razor,G1LLETTE RAZ0R,Personal Care,en,ocr_noise
+service_fee,Service Fee,Other,en,clean
+charity_donation,Charity Donation,Other,en,clean
+document_printing,Document Printing,Other,en,clean
+delivery_fee,Delivery Fee,Other,en,clean
+service_fee,رسوم خدمة,Other,ar,clean
+charity_donation,تبرع خيري,Other,ar,clean
+document_printing,طباعة مستندات,Other,ar,clean
+misc_expense,مصاريف متنوعة,Other,ar,clean
+delivery_fee,Delivery رسوم,Other,mixed,mixed_language
+service_fee,Service مصاريف,Other,mixed,mixed_language
+service_fee,SERV1CE FEE,Other,en,ocr_noise
+misc_expense,M1SC EXPENSE,Other,en,ocr_noise
+atomic_habits,Atomic Habits,Books,en,clean
+clean_code,Clean Code,Books,en,clean
+psychology_of_money,The Psychology of Money,Books,en,clean
+pragmatic_programmer,The Pragmatic Programmer,Books,en,clean
+atomic_habits,العادات الذرية,Books,ar,clean
+art_of_not_caring,كتاب فن اللامبالاة,Books,ar,clean
+awlad_haretna,رواية أولاد حارتنا,Books,ar,clean
+learn_python_book,كتاب تعلم بايثون,Books,ar,clean
+clean_code,Clean Code كتاب,Books,mixed,mixed_language
+atomic_habits,Atomic Habits نسخة عربية,Books,mixed,mixed_language
+atomic_habits,AT0MIC HAB1TS,Books,en,ocr_noise
+clean_code,CLEAN C0DE,Books,en,ocr_noise

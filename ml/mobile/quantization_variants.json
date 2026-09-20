@@ -1,0 +1,118 @@
+[
+  {
+    "name": "E5_DYNAMIC_INT8_PER_TENSOR",
+    "path": "G:\\Projects\\SpendWise\\ml\\onnx\\artifacts\\int8\\multilingual-e5-small-int8.onnx",
+    "quantization": "dynamic",
+    "per_channel": false,
+    "activation_type": "runtime dynamic",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_DYNAMIC_INT8_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_dynamic_int8_per_channel.onnx",
+    "quantization": "dynamic",
+    "per_channel": true,
+    "activation_type": "runtime dynamic",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_DYNAMIC_INT8_MATMUL_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_dynamic_int8_matmul_per_channel.onnx",
+    "quantization": "dynamic",
+    "per_channel": true,
+    "activation_type": "runtime dynamic",
+    "weight_type": "QInt8",
+    "op_scope": [
+      "MatMul"
+    ],
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QDQ_U8S8_PER_TENSOR",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qdq_u8s8_per_tensor.onnx",
+    "quantization": "static",
+    "per_channel": false,
+    "activation_type": "QUInt8",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QDQ_U8S8_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qdq_u8s8_per_channel.onnx",
+    "quantization": "static",
+    "per_channel": true,
+    "activation_type": "QUInt8",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QDQ_MATMUL_U8S8_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qdq_matmul_u8s8_per_channel.onnx",
+    "quantization": "static",
+    "per_channel": true,
+    "activation_type": "QUInt8",
+    "weight_type": "QInt8",
+    "op_scope": [
+      "MatMul"
+    ],
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QOP_U8S8_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qop_u8s8_per_channel.onnx",
+    "quantization": "static",
+    "per_channel": true,
+    "activation_type": "QUInt8",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QDQ_S8S8_PER_TENSOR",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qdq_s8s8_per_tensor.onnx",
+    "quantization": "static",
+    "per_channel": false,
+    "activation_type": "QInt8",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QDQ_S8S8_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qdq_s8s8_per_channel.onnx",
+    "quantization": "static",
+    "per_channel": true,
+    "activation_type": "QInt8",
+    "weight_type": "QInt8",
+    "op_scope": "ONNX Runtime defaults",
+    "status": "valid",
+    "error": null
+  },
+  {
+    "name": "E5_STATIC_QDQ_MATMUL_S8S8_PER_CHANNEL",
+    "path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\e5_quant\\e5_static_qdq_matmul_s8s8_per_channel.onnx",
+    "quantization": "static",
+    "per_channel": true,
+    "activation_type": "QInt8",
+    "weight_type": "QInt8",
+    "op_scope": [
+      "MatMul"
+    ],
+    "status": "valid",
+    "error": null
+  }
+]

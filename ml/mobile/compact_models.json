@@ -1,0 +1,42 @@
+[
+  {
+    "key": "ARABIC_TRIMMED_E5",
+    "model_name": "alphaedge-ai/multilingual-e5-small-arb-32768",
+    "query_prefix": "query: ",
+    "passage_prefix": "passage: ",
+    "embedding_dimension": 384,
+    "source_max_sequence_length": 512,
+    "pooling": "attention_mask_aware_mean",
+    "normalization": "L2 in graph",
+    "fp32_path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\compact_models\\arabic_trimmed_e5\\model-fp32.onnx",
+    "int8_path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\compact_models\\arabic_trimmed_e5\\model-int8-per-channel.onnx",
+    "fp32_bytes": 136543498,
+    "int8_bytes": 34906112,
+    "tokenizer_path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\compact_models\\arabic_trimmed_e5\\tokenizer",
+    "tokenizer_bytes": 2406905,
+    "tokenizer_files": [
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ]
+  },
+  {
+    "key": "FIHRIS_MINILM",
+    "model_name": "Ik45/fihris-embeddding-id-ar",
+    "query_prefix": "",
+    "passage_prefix": "",
+    "embedding_dimension": 384,
+    "source_max_sequence_length": 256,
+    "pooling": "attention_mask_aware_mean",
+    "normalization": "L2 in graph",
+    "fp32_path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\compact_models\\fihris_minilm\\model-fp32.onnx",
+    "int8_path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\compact_models\\fihris_minilm\\model-int8-per-channel.onnx",
+    "fp32_bytes": 159979786,
+    "int8_bytes": 40765184,
+    "tokenizer_path": "G:\\Projects\\SpendWise\\ml\\mobile\\artifacts\\compact_models\\fihris_minilm\\tokenizer",
+    "tokenizer_bytes": 2958024,
+    "tokenizer_files": [
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ]
+  }
+]
