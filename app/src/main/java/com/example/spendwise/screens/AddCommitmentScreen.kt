@@ -1,52 +1,26 @@
 package com.example.spendwise.screens
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.spendwise.data.CommitmentFrequency
-import com.example.spendwise.data.CommitmentType
-import com.example.spendwise.data.CommitmentRecurrence
-import com.example.spendwise.data.MerchantRanker
-import com.example.spendwise.data.shouldOfferNewMerchant
-import com.example.spendwise.data.formatEgp
-import com.example.spendwise.data.parseEgpToMinor
+import com.example.spendwise.data.*
 import com.example.spendwise.viewmodel.CommitmentsViewModel
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -79,125 +53,240 @@ fun AddCommitmentScreen(
     var typeExpanded by remember { mutableStateOf(false) }
     var frequencyExpanded by remember { mutableStateOf(false) }
 
+    var repaymentMode by rememberSaveable { mutableStateOf(RepaymentMode.FIXED_INSTALLMENTS) }
+    var repaymentExpanded by remember { mutableStateOf(false) }
+    var creditor by rememberSaveable { mutableStateOf("") }
+    var originalPrincipal by rememberSaveable { mutableStateOf("") }
+    var debtStartEpoch by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
+    var hasFinancing by rememberSaveable { mutableStateOf(false) }
+    var financingType by rememberSaveable { mutableStateOf(FinancingType.FIXED_TOTAL) }
+    var financingExpanded by remember { mutableStateOf(false) }
+    var totalRepayable by rememberSaveable { mutableStateOf("") }
+    var ratePercent by rememberSaveable { mutableStateOf("") }
+    var ratePeriod by rememberSaveable { mutableStateOf(RatePeriod.ANNUAL) }
+    var rateBasis by rememberSaveable { mutableStateOf(RateBasis.ORIGINAL_PRINCIPAL) }
+    var calculationMethod by rememberSaveable { mutableStateOf(FinancingCalculationMethod.CONTRACT_DEFINED) }
+    var hasLateRule by rememberSaveable { mutableStateOf(false) }
+    var graceDays by rememberSaveable { mutableStateOf("0") }
+    var chargeType by rememberSaveable { mutableStateOf(LateChargeType.PERCENT_ONCE) }
+    var chargeTypeExpanded by remember { mutableStateOf(false) }
+    var chargeValue by rememberSaveable { mutableStateOf("") }
+    var chargeInterval by rememberSaveable { mutableStateOf(LateChargeInterval.ONCE) }
+    var chargeBasis by rememberSaveable { mutableStateOf(LateChargeBasis.OVERDUE_INSTALLMENT) }
+    var minimumCharge by rememberSaveable { mutableStateOf("") }
+    var maximumCharge by rememberSaveable { mutableStateOf("") }
+    var isCompounding by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(commitmentId) {
         commitmentId?.let { key ->
             viewModel.getCommitment(key)?.let { existing ->
                 id = existing.id; originalCreatedAt = existing.createdAt; title = existing.title
                 amount = minorToInput(existing.amountMinor); type = existing.type; frequency = existing.frequency
                 dueDateEpoch = existing.nextDueDateEpochDay; hasEndDate = existing.endDateEpochDay != null
-                existing.endDateEpochDay?.let { endDateEpoch = it }; merchantId = existing.merchantId
-                merchantQuery = merchants.firstOrNull { it.id == existing.merchantId }?.displayName.orEmpty()
-                notes = existing.notes.orEmpty()
+                existing.endDateEpochDay?.let { endDateEpoch = it }; merchantId = existing.merchantId; notes = existing.notes.orEmpty()
+                viewModel.getDebtForCommitment(key)?.let { debt ->
+                    creditor = debt.creditorName.orEmpty(); originalPrincipal = minorToInput(debt.originalPrincipalMinor)
+                    debtStartEpoch = debt.startDateEpochDay; repaymentMode = debt.repaymentMode
+                    debt.expectedEndDateEpochDay?.let { hasEndDate = true; endDateEpoch = it }
+                    viewModel.getFinancing(debt.id)?.let { terms ->
+                        hasFinancing = true; financingType = terms.financingType
+                        totalRepayable = terms.totalRepayableMinor?.let(::minorToInput).orEmpty()
+                        ratePercent = terms.rateBasisPoints?.let(::basisPointsToInput).orEmpty()
+                        terms.ratePeriod?.let { ratePeriod = it }; terms.rateBasis?.let { rateBasis = it }; terms.calculationMethod?.let { calculationMethod = it }
+                    }
+                    viewModel.getLateRule(debt.id)?.let { rule ->
+                        hasLateRule = true; graceDays = rule.gracePeriodDays.toString(); chargeType = rule.chargeType
+                        chargeValue = if (rule.chargeType.name.startsWith("FIXED")) rule.fixedChargeMinor?.let(::minorToInput).orEmpty() else rule.rateBasisPoints?.let(::basisPointsToInput).orEmpty()
+                        chargeInterval = rule.chargeInterval; chargeBasis = rule.chargeBasis
+                        minimumCharge = rule.minimumChargeMinor?.let(::minorToInput).orEmpty(); maximumCharge = rule.maximumChargeMinor?.let(::minorToInput).orEmpty(); isCompounding = rule.isCompounding
+                    }
+                }
             }
         }
     }
     LaunchedEffect(merchantId, merchants) {
-        if (merchantId != null && merchantQuery.isBlank()) {
-            merchantQuery = merchants.firstOrNull { it.id == merchantId }?.displayName.orEmpty()
-        }
+        if (merchantId != null && merchantQuery.isBlank()) merchantQuery = merchants.firstOrNull { it.id == merchantId }?.displayName.orEmpty()
     }
+
+    val isDebt = type == CommitmentType.INSTALLMENT || type == CommitmentType.DEBT_PAYMENT
+    val fixedSchedule = !isDebt || repaymentMode == RepaymentMode.FIXED_INSTALLMENTS
     val parsedAmount = parseEgpToMinor(amount)
-    val effectiveHasEndDate = hasEndDate && frequency != CommitmentFrequency.ONE_TIME
+    val parsedOriginal = parseEgpToMinor(originalPrincipal)
+    val effectiveHasEndDate = hasEndDate && frequency != CommitmentFrequency.ONE_TIME && fixedSchedule
     val invalidEnd = effectiveHasEndDate && endDateEpoch < dueDateEpoch
-    val previewDates = CommitmentRecurrence.preview(
-        frequency, LocalDate.ofEpochDay(dueDateEpoch),
-        endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay)
-    )
+    val previewDates = if (fixedSchedule) CommitmentRecurrence.preview(frequency, LocalDate.ofEpochDay(dueDateEpoch), endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay)) else emptyList()
     val merchantSuggestions = remember(merchantQuery, merchants) { MerchantRanker.rank(merchantQuery, merchants) }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(if (commitmentId == null) "Add Commitment" else "Edit Commitment", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        OutlinedTextField(title, { title = it }, label = { Text("Name") }, placeholder = { Text("e.g. Car installment or Netflix") }, singleLine = true, isError = showValidation && title.isBlank(), modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(amount, { amount = it }, label = { Text("Amount (EGP)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, isError = showValidation && (parsedAmount == null || parsedAmount <= 0), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(title, { title = it }, label = { Text("Name") }, singleLine = true, isError = showValidation && title.isBlank(), modifier = Modifier.fillMaxWidth())
         EnumDropdown("Type", type.displayName(), CommitmentType.entries.toList(), typeExpanded, { typeExpanded = it }, { type = it; typeExpanded = false }) { it.displayName() }
-        EnumDropdown("Frequency", frequency.displayName(), CommitmentFrequency.entries.filter { it != CommitmentFrequency.CUSTOM }, frequencyExpanded, { frequencyExpanded = it }, { frequency = it; frequencyExpanded = false }) { it.displayName() }
-        DateField(if (frequency == CommitmentFrequency.ONE_TIME) "Due date" else "First payment date", LocalDate.ofEpochDay(dueDateEpoch)) { picker = "due" }
-        if (frequency != CommitmentFrequency.ONE_TIME) {
-            Text("Ends", style = MaterialTheme.typography.labelLarge)
-            if (hasEndDate) {
-                DateField("End date", LocalDate.ofEpochDay(endDateEpoch), invalidEnd) { picker = "end" }
-                TextButton(onClick = { hasEndDate = false }) { Text("Clear end date") }
-            } else {
-                OutlinedButton(onClick = {
-                    hasEndDate = true
-                    if (endDateEpoch < dueDateEpoch) endDateEpoch = LocalDate.ofEpochDay(dueDateEpoch).plusYears(1).toEpochDay()
-                    picker = "end"
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text("No end date", modifier = Modifier.weight(1f)); Icon(Icons.Outlined.DateRange, contentDescription = "Choose end date")
+
+        if (isDebt) {
+            SectionLabel("Debt details")
+            OutlinedTextField(creditor, { creditor = it }, label = { Text("Creditor / entity") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            MoneyField("Original principal", originalPrincipal, { originalPrincipal = it }, showValidation && (parsedOriginal == null || parsedOriginal <= 0))
+            DateField("Debt start date", LocalDate.ofEpochDay(debtStartEpoch)) { picker = "debtStart" }
+            EnumDropdown("Repayment style", repaymentMode.displayName(), RepaymentMode.entries.toList(), repaymentExpanded, { repaymentExpanded = it }, { repaymentMode = it; repaymentExpanded = false }) { it.displayName() }
+        }
+
+        if (fixedSchedule) {
+            MoneyField(if (isDebt) "Scheduled payment" else "Amount", amount, { amount = it }, showValidation && (parsedAmount == null || parsedAmount <= 0))
+            EnumDropdown("Frequency", frequency.displayName(), CommitmentFrequency.entries.filter { it != CommitmentFrequency.CUSTOM }, frequencyExpanded, { frequencyExpanded = it }, { frequency = it; frequencyExpanded = false }) { it.displayName() }
+            DateField(if (frequency == CommitmentFrequency.ONE_TIME) "Due date" else "First payment date", LocalDate.ofEpochDay(dueDateEpoch)) { picker = "due" }
+            if (frequency != CommitmentFrequency.ONE_TIME) EndDateFields(hasEndDate, endDateEpoch, dueDateEpoch, invalidEnd, { hasEndDate = it }, { endDateEpoch = it }, { picker = "end" })
+        } else {
+            Text("Open-ended debts create no fictional future payments or forecast amounts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        if (isDebt) {
+            ToggleRow("Includes financing cost or interest?", hasFinancing) { hasFinancing = it }
+            if (hasFinancing) {
+                EnumDropdown("Financing terms", financingType.displayName(), FinancingType.entries.toList(), financingExpanded, { financingExpanded = it }, { financingType = it; financingExpanded = false }) { it.displayName() }
+                when (financingType) {
+                    FinancingType.FIXED_TOTAL -> MoneyField("Total repayable", totalRepayable, { totalRepayable = it })
+                    FinancingType.USER_PROVIDED_RATE -> {
+                        OutlinedTextField(ratePercent, { ratePercent = it }, label = { Text("Contract rate (%)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.fillMaxWidth())
+                        SimpleEnumDropdown("Rate period", ratePeriod, RatePeriod.entries) { ratePeriod = it }
+                        SimpleEnumDropdown("Rate basis", rateBasis, RateBasis.entries) { rateBasis = it }
+                        SimpleEnumDropdown("Calculation method", calculationMethod, FinancingCalculationMethod.entries) { calculationMethod = it }
+                        Text("Rate metadata is stored, but no amortization is invented.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    FinancingType.UNKNOWN_DETAILS -> Text("Terms will be recorded as unknown; no financing calculation is produced.")
                 }
             }
+            ToggleRow("Late payment rule?", hasLateRule) { hasLateRule = it }
+            if (hasLateRule) {
+                OutlinedTextField(graceDays, { graceDays = it.filter(Char::isDigit) }, label = { Text("Grace period (complete days)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                EnumDropdown("Charge method", chargeType.displayName(), LateChargeType.entries.toList(), chargeTypeExpanded, { chargeTypeExpanded = it }, { chargeType = it; chargeTypeExpanded = false }) { it.displayName() }
+                OutlinedTextField(chargeValue, { chargeValue = it }, label = { Text(if (chargeType.name.startsWith("FIXED")) "Charge value (EGP)" else "Charge value (%)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.fillMaxWidth())
+                if (chargeType.name.endsWith("PERIODIC")) SimpleEnumDropdown("Applied", chargeInterval, listOf(LateChargeInterval.DAILY, LateChargeInterval.WEEKLY, LateChargeInterval.MONTHLY)) { chargeInterval = it }
+                SimpleEnumDropdown("Calculated on", chargeBasis, LateChargeBasis.entries) { chargeBasis = it }
+                MoneyField("Minimum charge (optional)", minimumCharge, { minimumCharge = it })
+                MoneyField("Maximum charge (optional)", maximumCharge, { maximumCharge = it })
+                if (chargeType == LateChargeType.PERCENT_PERIODIC) ToggleRow("Compound periodic charges", isCompounding) { isCompounding = it }
+            }
         }
-        OutlinedTextField(
-            value = merchantQuery,
-            onValueChange = { merchantQuery = it; merchantId = null },
-            label = { Text("Merchant (optional)") }, placeholder = { Text("Search merchant") }, singleLine = true,
-            modifier = Modifier.fillMaxWidth().onFocusChanged { merchantFocused = it.isFocused }
-        )
-        if (merchantFocused) {
-            InlineSuggestionList(
-                merchantSuggestions.take(5).map { InlineSuggestion(it.merchant.id, it.merchant, it.merchant.displayName,
-                    it.merchant.usageCount.takeIf { count -> count > 0 }?.let { count -> "Used $count times" }) },
-                onSelected = { selected ->
-                    merchantId = selected.id; merchantQuery = selected.displayName; merchantFocused = false; focusManager.clearFocus()
-                },
-                addLabel = if (shouldOfferNewMerchant(merchantQuery, merchantSuggestions)) "Add “${merchantQuery.trim()}”" else null,
-                onAdd = if (shouldOfferNewMerchant(merchantQuery, merchantSuggestions)) {{
-                    viewModel.createMerchant(merchantQuery) { created ->
-                        merchantId = created?.id; created?.let { merchantQuery = it.displayName }
-                        merchantFocused = false; focusManager.clearFocus()
-                    }
-                }} else null
-            )
-        }
+
+        MerchantField(merchantQuery, { merchantQuery = it; merchantId = null }, merchantFocused, { merchantFocused = it }, merchantSuggestions,
+            onSelect = { merchantId = it.id; merchantQuery = it.displayName; merchantFocused = false; focusManager.clearFocus() },
+            onAdd = { viewModel.createMerchant(merchantQuery) { created -> merchantId = created?.id; created?.let { merchantQuery = it.displayName }; merchantFocused = false; focusManager.clearFocus() } })
         OutlinedTextField(notes, { notes = it }, label = { Text("Notes (optional)") }, minLines = 2, modifier = Modifier.fillMaxWidth())
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (frequency == CommitmentFrequency.ONE_TIME) "One-time payment" else "Upcoming payments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+        if (fixedSchedule) {
+            SectionLabel(if (frequency == CommitmentFrequency.ONE_TIME) "One-time payment" else "Upcoming payments")
             previewDates.forEach { Text(it.format(commitmentFormDateFormatter), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (previewDates.isEmpty() && invalidEnd) Text("Choose an end date on or after the first payment.", color = MaterialTheme.colorScheme.error)
         }
-        parsedAmount?.takeIf { it > 0 }?.let { Text("${formatEgp(it)} · ${frequency.displayName()}", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Button(onClick = {
             showValidation = true
-            if (title.isNotBlank() && parsedAmount != null && parsedAmount > 0 && !invalidEnd) {
-                viewModel.saveCommitment(id, title, parsedAmount, type, frequency, LocalDate.ofEpochDay(dueDateEpoch), endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay), merchantId, notes, originalCreatedAt, onSaved)
+            val validBase = title.isNotBlank() && !invalidEnd && (!fixedSchedule || parsedAmount != null && parsedAmount > 0)
+            if (validBase && (!isDebt || parsedOriginal != null && parsedOriginal > 0)) {
+                val now = System.currentTimeMillis()
+                val due = if (fixedSchedule) LocalDate.ofEpochDay(dueDateEpoch) else LocalDate.ofEpochDay(debtStartEpoch)
+                val commitment = FinancialCommitmentEntity(id, title.trim(), if (fixedSchedule) parsedAmount!! else 0, type,
+                    if (fixedSchedule) frequency else CommitmentFrequency.ONE_TIME, due.toEpochDay(), endDateEpoch.takeIf { effectiveHasEndDate }, due.toEpochDay(), true,
+                    merchantId, notes.trim().takeIf(String::isNotBlank), originalCreatedAt ?: now, now)
+                if (!isDebt) viewModel.saveCommitment(id, title, parsedAmount!!, type, frequency, due, endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay), merchantId, notes, originalCreatedAt, onSaved)
+                else {
+                    val financingTerms = buildFinancingTerms(hasFinancing, financingType, totalRepayable, ratePercent, ratePeriod, rateBasis, calculationMethod)
+                    val lateRule = buildLateRule(hasLateRule, graceDays, chargeType, chargeValue, chargeInterval, chargeBasis, minimumCharge, maximumCharge, isCompounding)
+                    if ((hasFinancing && financingTerms == null) || (hasLateRule && lateRule == null)) return@Button
+                    if (financingTerms?.financingType == FinancingType.FIXED_TOTAL && financingTerms.totalRepayableMinor!! < parsedOriginal!!) return@Button
+                    viewModel.saveDebt(DebtDefinitionInput(commitment, creditor, parsedOriginal!!, LocalDate.ofEpochDay(debtStartEpoch), endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay), repaymentMode, notes, financingTerms, lateRule), onSaved)
+                }
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("Save Commitment") }
     }
 
     picker?.let { target ->
-        val initial = if (target == "due") dueDateEpoch else endDateEpoch
-        SpendWiseDatePickerDialog(
-            initialDate = LocalDate.ofEpochDay(initial),
-            onDateSelected = { date ->
-                if (target == "due") dueDateEpoch = date.toEpochDay() else endDateEpoch = date.toEpochDay()
-                picker = null
-            },
-            onDismiss = { picker = null }
-        )
+        val initial = when (target) { "debtStart" -> debtStartEpoch; "due" -> dueDateEpoch; else -> endDateEpoch }
+        SpendWiseDatePickerDialog(LocalDate.ofEpochDay(initial), onDateSelected = { date ->
+            when (target) { "debtStart" -> debtStartEpoch = date.toEpochDay(); "due" -> dueDateEpoch = date.toEpochDay(); else -> endDateEpoch = date.toEpochDay() }
+            picker = null
+        }, onDismiss = { picker = null })
     }
 }
 
+@Composable private fun SectionLabel(text: String) = Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+
+@Composable private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, modifier = Modifier.padding(top = 12.dp).weight(1f)); Switch(checked, onChange) }
+}
+
+@Composable private fun MoneyField(label: String, value: String, onChange: (String) -> Unit, error: Boolean = false) {
+    OutlinedTextField(value, onChange, label = { Text(label) }, suffix = { Text("EGP") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, isError = error, modifier = Modifier.fillMaxWidth())
+}
+
+@Composable private fun EndDateFields(hasEnd: Boolean, endEpoch: Long, dueEpoch: Long, invalid: Boolean, setHasEnd: (Boolean) -> Unit, setEnd: (Long) -> Unit, open: () -> Unit) {
+    Text("Ends", style = MaterialTheme.typography.labelLarge)
+    if (hasEnd) {
+        DateField("End date", LocalDate.ofEpochDay(endEpoch), invalid, open)
+        TextButton(onClick = { setHasEnd(false) }) { Text("Clear end date") }
+    } else OutlinedButton(onClick = { setHasEnd(true); if (endEpoch < dueEpoch) setEnd(LocalDate.ofEpochDay(dueEpoch).plusYears(1).toEpochDay()); open() }, modifier = Modifier.fillMaxWidth()) {
+        Text("No end date", Modifier.weight(1f)); Icon(Icons.Outlined.DateRange, "Choose end date")
+    }
+}
+
+@Composable private fun MerchantField(query: String, onQuery: (String) -> Unit, focused: Boolean, onFocus: (Boolean) -> Unit, suggestions: List<MerchantSuggestion>, onSelect: (MerchantEntity) -> Unit, onAdd: () -> Unit) {
+    OutlinedTextField(query, onQuery, label = { Text("Merchant (optional)") }, placeholder = { Text("Search merchant") }, singleLine = true, modifier = Modifier.fillMaxWidth().onFocusChanged { onFocus(it.isFocused) })
+    if (focused) InlineSuggestionList(
+        suggestions.take(5).map { InlineSuggestion(it.merchant.id, it.merchant, it.merchant.displayName) }, onSelected = onSelect,
+        addLabel = if (shouldOfferNewMerchant(query, suggestions)) "Add “${query.trim()}”" else null,
+        onAdd = if (shouldOfferNewMerchant(query, suggestions)) onAdd else null
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun <T> EnumDropdown(label: String, value: String, values: List<T>, expanded: Boolean, setExpanded: (Boolean) -> Unit, select: (T) -> Unit, name: (T) -> String) {
+@Composable private fun <T> EnumDropdown(label: String, value: String, values: List<T>, expanded: Boolean, setExpanded: (Boolean) -> Unit, select: (T) -> Unit, name: (T) -> String) {
     ExposedDropdownMenuBox(expanded, setExpanded) {
         OutlinedTextField(value, {}, readOnly = true, label = { Text(label) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
-        ExposedDropdownMenu(expanded, { setExpanded(false) }) { values.forEach { item -> DropdownMenuItem(text = { Text(name(item)) }, onClick = { select(item) }) } }
+        ExposedDropdownMenu(expanded, { setExpanded(false) }) { values.forEach { item -> DropdownMenuItem({ Text(name(item)) }, onClick = { select(item) }) } }
     }
+}
+
+@Composable private fun <T : Enum<T>> SimpleEnumDropdown(label: String, value: T, values: List<T>, onSelected: (T) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    EnumDropdown(label, value.displayName(), values, expanded, { expanded = it }, { onSelected(it); expanded = false }) { it.displayName() }
 }
 
 @Composable private fun DateField(label: String, date: LocalDate, isError: Boolean = false, onClick: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge)
-        OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-            Text(date.format(commitmentFormDateFormatter), modifier = Modifier.weight(1f))
-            Icon(Icons.Outlined.DateRange, contentDescription = "Choose $label")
-        }
-        if (isError) Text("End date must be on or after the first payment date", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick, Modifier.fillMaxWidth()) { Text(date.format(commitmentFormDateFormatter), Modifier.weight(1f)); Icon(Icons.Outlined.DateRange, "Choose $label") }
+        if (isError) Text("End date must be on or after the first payment date", color = MaterialTheme.colorScheme.error)
     }
 }
 
+private fun buildFinancingTerms(enabled: Boolean, type: FinancingType, total: String, rate: String, period: RatePeriod, basis: RateBasis, method: FinancingCalculationMethod): FinancingTermsEntity? {
+    if (!enabled) return null
+    val totalMinor = if (type == FinancingType.FIXED_TOTAL) parseEgpToMinor(total)?.takeIf { it > 0 } ?: return null else null
+    val basisPoints = if (type == FinancingType.USER_PROVIDED_RATE) parsePercentBasisPoints(rate) ?: return null else null
+    return FinancingTermsEntity(financingType = type, debtProfileId = 0, totalRepayableMinor = totalMinor, rateBasisPoints = basisPoints,
+        ratePeriod = period.takeIf { type == FinancingType.USER_PROVIDED_RATE }, rateBasis = basis.takeIf { type == FinancingType.USER_PROVIDED_RATE },
+        calculationMethod = method.takeIf { type == FinancingType.USER_PROVIDED_RATE }, createdAt = 0, updatedAt = 0)
+}
+
+private fun buildLateRule(enabled: Boolean, grace: String, type: LateChargeType, value: String, interval: LateChargeInterval, basis: LateChargeBasis, minimum: String, maximum: String, compound: Boolean): LatePaymentRuleEntity? {
+    if (!enabled) return null
+    val graceDays = grace.toIntOrNull()?.takeIf { it >= 0 } ?: return null
+    val fixed = if (type.name.startsWith("FIXED")) parseEgpToMinor(value)?.takeIf { it >= 0 } ?: return null else null
+    val rate = if (type.name.startsWith("PERCENT")) parsePercentBasisPoints(value)?.takeIf { it >= 0 } ?: return null else null
+    val actualInterval = if (type.name.endsWith("ONCE")) LateChargeInterval.ONCE else interval
+    val minMinor = minimum.takeIf(String::isNotBlank)?.let(::parseEgpToMinor)
+    val maxMinor = maximum.takeIf(String::isNotBlank)?.let(::parseEgpToMinor)
+    if ((minimum.isNotBlank() && minMinor == null) || (maximum.isNotBlank() && maxMinor == null) ||
+        (minMinor != null && maxMinor != null && minMinor > maxMinor)) return null
+    return LatePaymentRuleEntity(debtProfileId = 0, gracePeriodDays = graceDays, chargeType = type, fixedChargeMinor = fixed, rateBasisPoints = rate,
+        chargeInterval = actualInterval, chargeBasis = basis, minimumChargeMinor = minMinor,
+        maximumChargeMinor = maxMinor, isCompounding = compound && type == LateChargeType.PERCENT_PERIODIC,
+        createdAt = 0, updatedAt = 0)
+}
+
+private fun parsePercentBasisPoints(value: String): Long? = try {
+    BigDecimal(value.trim()).multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.UNNECESSARY).longValueExact()
+} catch (_: Exception) { null }
+
+private fun basisPointsToInput(value: Long): String = BigDecimal.valueOf(value).movePointLeft(2).stripTrailingZeros().toPlainString()
 private fun minorToInput(value: Long): String = if (value % 100L == 0L) (value / 100L).toString() else "${value / 100L}.${(value % 100L).toString().padStart(2, '0')}"
+private fun Enum<*>.displayName(): String = name.lowercase().split('_').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }

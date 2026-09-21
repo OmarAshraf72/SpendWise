@@ -39,6 +39,8 @@ import com.example.spendwise.data.CommitmentViewMode
 import com.example.spendwise.data.formatEgp
 import com.example.spendwise.viewmodel.CommitmentsUiState
 import com.example.spendwise.viewmodel.CommitmentsViewModel
+import com.example.spendwise.viewmodel.CommitmentGroupFilter
+import com.example.spendwise.viewmodel.DebtSummaryUi
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -49,11 +51,13 @@ private val commitmentMonthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
 fun CommitmentsScreen(
     onAddCommitment: () -> Unit,
     onEditCommitment: (Long) -> Unit,
+    onDebtDetail: (Long) -> Unit,
     viewModel: CommitmentsViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showMonthPicker by remember { mutableStateOf(false) }
     var overdueExpanded by remember { mutableStateOf(false) }
+    val debtProfilesByCommitment = state.activeDebts.associate { it.profile.commitmentId to it.profile.id }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -70,8 +74,16 @@ fun CommitmentsScreen(
         }
         item { PeriodHeader(state.selectedMonth, viewModel::previousMonth, viewModel::nextMonth) { showMonthPicker = true } }
         item { ViewModeSelector(state.viewMode, viewModel::setViewMode) }
-        item { TypeFilters(state.selectedType, viewModel::setTypeFilter) }
+        item { GroupFilters(state.selectedGroup, viewModel::setGroupFilter) }
         item { PeriodSummaryCard(state) }
+
+        if (state.activeDebts.isNotEmpty()) {
+            item { DebtPortfolioCard(state) }
+            item { SectionTitle("Active debts") }
+            items(state.activeDebts, key = { "debt-${it.profile.id}" }) { debt ->
+                ActiveDebtCard(debt) { onDebtDetail(debt.profile.id) }
+            }
+        }
 
         if (state.overdue.isNotEmpty()) {
             item {
@@ -83,18 +95,18 @@ fun CommitmentsScreen(
                 }
             }
             if (overdueExpanded) items(state.overdue, key = { "overdue-${it.commitment.commitment.id}-${it.dueDate}" }) {
-                CommitmentCard(it, true, onEditCommitment, viewModel::setStatus)
+                CommitmentCard(it, true, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail)
             }
         }
 
         when (state.viewMode) {
             CommitmentViewMode.MONTH -> {
                 item { SectionTitle("Due this month") }
-                occurrenceItems(state.displayedOccurrences, "month", onAddCommitment, onEditCommitment, viewModel::setStatus)
+                occurrenceItems(state.displayedOccurrences, "month", onAddCommitment, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment, onDebtDetail)
             }
             CommitmentViewMode.NEXT_30_DAYS -> {
                 item { SectionTitle("Due in the next 30 days") }
-                occurrenceItems(state.displayedOccurrences, "30days", onAddCommitment, onEditCommitment, viewModel::setStatus)
+                occurrenceItems(state.displayedOccurrences, "30days", onAddCommitment, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment, onDebtDetail)
             }
             CommitmentViewMode.ALL_UPCOMING -> {
                 item { SectionTitle("All upcoming") }
@@ -102,7 +114,7 @@ fun CommitmentsScreen(
                 else state.upcomingByMonth.forEach { (month, occurrences) ->
                     item("heading-$month") { Text(month.format(commitmentMonthFormatter), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                     items(occurrences, key = { "all-${it.commitment.commitment.id}-${it.dueDate}" }) {
-                        CommitmentCard(it, false, onEditCommitment, viewModel::setStatus)
+                        CommitmentCard(it, false, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail)
                     }
                 }
             }
@@ -122,11 +134,12 @@ fun CommitmentsScreen(
 
 private fun LazyListScope.occurrenceItems(
     occurrences: List<CommitmentOccurrence>, keyPrefix: String, onAdd: () -> Unit, onEdit: (Long) -> Unit,
-    setStatus: (CommitmentOccurrence, CommitmentOccurrenceStatus, Boolean) -> Unit
+    setStatus: (CommitmentOccurrence, CommitmentOccurrenceStatus, Boolean) -> Unit,
+    debtProfilesByCommitment: Map<Long, Long>, onDebtDetail: (Long) -> Unit
 ) {
     if (occurrences.isEmpty()) item { EmptyCommitments(onAdd) }
     else items(occurrences, key = { "$keyPrefix-${it.commitment.commitment.id}-${it.dueDate}" }) {
-        CommitmentCard(it, false, onEdit, setStatus)
+        CommitmentCard(it, false, onEdit, setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail)
     }
 }
 
@@ -150,10 +163,42 @@ private fun ViewModeSelector(selected: CommitmentViewMode, onSelected: (Commitme
 }
 
 @Composable
-private fun TypeFilters(selected: CommitmentType?, onSelected: (CommitmentType?) -> Unit) {
-    val filters = listOf(null, CommitmentType.INSTALLMENT, CommitmentType.SUBSCRIPTION, CommitmentType.UTILITIES, CommitmentType.INSURANCE, CommitmentType.DEBT_PAYMENT)
+private fun GroupFilters(selected: CommitmentGroupFilter, onSelected: (CommitmentGroupFilter) -> Unit) {
+    val filters = listOf(
+        CommitmentGroupFilter.ALL to "All",
+        CommitmentGroupFilter.INSTALLMENTS to "Installments",
+        CommitmentGroupFilter.DEBTS to "Debts",
+        CommitmentGroupFilter.OTHER to "Other"
+    )
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(filters) { type -> FilterChip(selected == type, { onSelected(type) }, label = { Text(type?.displayName() ?: "All") }) }
+        items(filters) { (filter, label) -> FilterChip(selected == filter, { onSelected(filter) }, label = { Text(label) }) }
+    }
+}
+
+@Composable
+private fun DebtPortfolioCard(state: CommitmentsUiState) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Active debt", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            AmountLine("Original debt", state.debtPortfolio.originalMinor)
+            AmountLine("Principal paid", state.debtPortfolio.principalPaidMinor)
+            AmountLine("Remaining", state.debtPortfolio.remainingMinor, true)
+        }
+    }
+}
+
+@Composable
+private fun ActiveDebtCard(debt: DebtSummaryUi, onClick: () -> Unit) {
+    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(debt.commitment.commitment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(formatEgp(debt.balance.outstandingPrincipalMinor), fontWeight = FontWeight.SemiBold)
+            }
+            debt.profile.creditorName?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Text(if (debt.profile.repaymentMode == com.example.spendwise.data.RepaymentMode.OPEN_ENDED) "Open-ended debt" else "Fixed installments")
+            debt.nextOccurrence?.let { Text("Next: ${formatEgp(it.amountMinor)} · ${it.dueDate.format(commitmentDayFormatter)}") }
+        }
     }
 }
 
@@ -191,7 +236,9 @@ private fun EmptyCommitments(onAdd: () -> Unit) {
 @Composable
 private fun CommitmentCard(
     occurrence: CommitmentOccurrence, overdue: Boolean, onEdit: (Long) -> Unit,
-    setStatus: (CommitmentOccurrence, CommitmentOccurrenceStatus, Boolean) -> Unit
+    setStatus: (CommitmentOccurrence, CommitmentOccurrenceStatus, Boolean) -> Unit,
+    debtProfileId: Long? = null,
+    onDebtDetail: (Long) -> Unit = {}
 ) {
     val definition = occurrence.commitment.commitment
     Card(Modifier.fillMaxWidth()) {
@@ -210,7 +257,9 @@ private fun CommitmentCard(
             }
             statusLabel?.let { Text(it, color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (occurrence.status == CommitmentOccurrenceStatus.UNPAID) {
+                if (debtProfileId != null) {
+                    TextButton(onClick = { onDebtDetail(debtProfileId) }) { Text("Manage payment") }
+                } else if (occurrence.status == CommitmentOccurrenceStatus.UNPAID) {
                     TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.PAID, false) }) { Text("Paid") }
                     TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.PAID, true) }) { Text("Paid + expense") }
                     TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.SKIPPED, false) }) { Text("Skip") }

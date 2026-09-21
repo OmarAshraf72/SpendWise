@@ -35,6 +35,7 @@ import com.example.spendwise.screens.ReceiptCaptureScreen
 import com.example.spendwise.screens.ReceiptReviewScreen
 import com.example.spendwise.screens.SettingsScreen
 import com.example.spendwise.screens.MoreScreen
+import com.example.spendwise.screens.DebtDetailScreen
 import com.example.spendwise.screens.TransactionsScreen
 import com.example.spendwise.viewmodel.ReceiptViewModel
 import kotlinx.coroutines.launch
@@ -56,7 +57,8 @@ fun SpendWiseApp() {
     val receiptReviewRoute = "receipt_review"
     val categoriesRoute = "categories"
     val settingsRoute = "settings"
-    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, receiptCaptureRoute, receiptReviewRoute)
+    val debtDetailRoute = "debt_detail/{debtProfileId}"
+    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, receiptCaptureRoute, receiptReviewRoute)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -104,7 +106,8 @@ fun SpendWiseApp() {
             composable(MainDestination.Commitments.route) {
                 CommitmentsScreen(
                     onAddCommitment = { navController.navigate(addCommitmentRoute) },
-                    onEditCommitment = { navController.navigate("edit_commitment/$it") }
+                    onEditCommitment = { navController.navigate("edit_commitment/$it") },
+                    onDebtDetail = { navController.navigate("debt_detail/$it") }
                 )
             }
             composable(MainDestination.More.route) {
@@ -112,6 +115,10 @@ fun SpendWiseApp() {
             }
             composable(categoriesRoute) { CategoriesScreen() }
             composable(settingsRoute) { SettingsScreen(onBack = { navController.popBackStack() }) }
+            composable(
+                debtDetailRoute,
+                arguments = listOf(navArgument("debtProfileId") { type = NavType.LongType })
+            ) { DebtDetailScreen(onBack = { navController.popBackStack() }) }
             composable(addExpenseRoute) {
                 AddExpenseScreen(onSaved = { navController.popBackStack() })
             }

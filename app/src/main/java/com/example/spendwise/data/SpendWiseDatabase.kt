@@ -15,14 +15,15 @@ import kotlinx.coroutines.launch
 @Database(
     entities = [
         CategoryEntity::class, TransactionEntity::class, ItemCategoryMappingEntity::class, MerchantEntity::class,
-        FinancialCommitmentEntity::class, CommitmentOccurrenceOverrideEntity::class
+        FinancialCommitmentEntity::class, CommitmentOccurrenceOverrideEntity::class,
+        DebtProfileEntity::class, DebtPaymentEntity::class, FinancingTermsEntity::class, LatePaymentRuleEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(
     CategoryTypeConverter::class, TransactionConverters::class, MerchantSourceConverter::class,
-    CommitmentConverters::class
+    CommitmentConverters::class, DebtConverters::class
 )
 abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
@@ -30,6 +31,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun itemCategoryMappingDao(): ItemCategoryMappingDao
     abstract fun merchantDao(): MerchantDao
     abstract fun commitmentDao(): CommitmentDao
+    abstract fun debtDao(): DebtDao
 
     companion object {
         @Volatile private var instance: SpendWiseDatabase? = null
@@ -41,7 +43,8 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 SpendWiseDatabase::class.java,
                 "spendwise.db"
             ).addMigrations(
-                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7
+                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+                MIGRATION_7_8
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -303,6 +306,95 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                     "CREATE INDEX index_commitment_occurrence_overrides_paidTransactionId " +
                         "ON commitment_occurrence_overrides (paidTransactionId)"
                 )
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS debt_profiles (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        commitmentId INTEGER NOT NULL,
+                        creditorName TEXT,
+                        originalPrincipalMinor INTEGER NOT NULL,
+                        startDateEpochDay INTEGER NOT NULL,
+                        expectedEndDateEpochDay INTEGER,
+                        repaymentMode TEXT NOT NULL,
+                        notes TEXT,
+                        isArchived INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        FOREIGN KEY(commitmentId) REFERENCES financial_commitments(id) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX index_debt_profiles_commitmentId ON debt_profiles (commitmentId)")
+                db.execSQL("CREATE INDEX index_debt_profiles_repaymentMode ON debt_profiles (repaymentMode)")
+                db.execSQL("CREATE INDEX index_debt_profiles_isArchived ON debt_profiles (isArchived)")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS debt_payments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        debtProfileId INTEGER NOT NULL,
+                        occurrenceDueDateEpochDay INTEGER,
+                        paymentDateEpochDay INTEGER NOT NULL,
+                        totalPaidMinor INTEGER NOT NULL,
+                        principalPaidMinor INTEGER NOT NULL,
+                        financingCostPaidMinor INTEGER NOT NULL,
+                        lateChargePaidMinor INTEGER NOT NULL,
+                        linkedTransactionId INTEGER,
+                        note TEXT,
+                        idempotencyKey TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        FOREIGN KEY(debtProfileId) REFERENCES debt_profiles(id) ON UPDATE NO ACTION ON DELETE NO ACTION,
+                        FOREIGN KEY(linkedTransactionId) REFERENCES transactions(id) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX index_debt_payments_debtProfileId ON debt_payments (debtProfileId)")
+                db.execSQL("CREATE INDEX index_debt_payments_occurrenceDueDateEpochDay ON debt_payments (occurrenceDueDateEpochDay)")
+                db.execSQL("CREATE INDEX index_debt_payments_linkedTransactionId ON debt_payments (linkedTransactionId)")
+                db.execSQL("CREATE UNIQUE INDEX index_debt_payments_idempotencyKey ON debt_payments (idempotencyKey)")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS financing_terms (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        debtProfileId INTEGER NOT NULL,
+                        financingType TEXT NOT NULL,
+                        totalRepayableMinor INTEGER,
+                        rateBasisPoints INTEGER,
+                        ratePeriod TEXT,
+                        rateBasis TEXT,
+                        calculationMethod TEXT,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        FOREIGN KEY(debtProfileId) REFERENCES debt_profiles(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX index_financing_terms_debtProfileId ON financing_terms (debtProfileId)")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS late_payment_rules (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        debtProfileId INTEGER NOT NULL,
+                        gracePeriodDays INTEGER NOT NULL,
+                        chargeType TEXT NOT NULL,
+                        fixedChargeMinor INTEGER,
+                        rateBasisPoints INTEGER,
+                        chargeInterval TEXT NOT NULL,
+                        chargeBasis TEXT NOT NULL,
+                        minimumChargeMinor INTEGER,
+                        maximumChargeMinor INTEGER,
+                        isCompounding INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        FOREIGN KEY(debtProfileId) REFERENCES debt_profiles(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX index_late_payment_rules_debtProfileId ON late_payment_rules (debtProfileId)")
             }
         }
     }
