@@ -20,9 +20,18 @@ enum class TransactionSource { MANUAL, RECEIPT, BANK_NOTIFICATION, SMS }
             parentColumns = ["id"],
             childColumns = ["categoryId"],
             onDelete = ForeignKey.NO_ACTION
+        ),
+        ForeignKey(
+            entity = MerchantEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["merchantId"],
+            onDelete = ForeignKey.NO_ACTION
         )
     ],
-    indices = [Index("categoryId"), Index("transactionDate"), Index("receiptGroupId")]
+    indices = [
+        Index("categoryId"), Index("merchantId"), Index("transactionDate"),
+        Index("receiptGroupId"), Index("purchaseGroupId")
+    ]
 )
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -34,7 +43,9 @@ data class TransactionEntity(
     val transactionDate: Long,
     val source: TransactionSource,
     val createdAt: Long,
-    val receiptGroupId: String? = null
+    val receiptGroupId: String? = null,
+    val merchantId: Long? = null,
+    val purchaseGroupId: String? = null
 )
 
 data class TransactionWithCategory(

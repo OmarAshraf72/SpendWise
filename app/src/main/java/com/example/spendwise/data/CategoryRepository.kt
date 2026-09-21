@@ -2,6 +2,7 @@ package com.example.spendwise.data
 
 class CategoryRepository(private val dao: CategoryDao) {
     val categories = dao.observeCategories()
+    val categoriesForEntry = dao.observeCategoriesForEntry()
 
     suspend fun getActiveCategories(): List<CategoryEntity> = dao.getActiveCategories()
 

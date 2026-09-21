@@ -10,7 +10,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-enum class PriceSource { OCR_ORIGINAL, OCR_NUMERIC_RECOVERY, TOTAL_RECONCILIATION, MANUAL }
+enum class PriceSource { OCR_ORIGINAL, OCR_NUMERIC_RECOVERY, ARITHMETIC_RECOVERY, TOTAL_RECONCILIATION, MANUAL }
 
 data class ParsedReceiptItem(
     val name: String,
@@ -26,8 +26,11 @@ data class PriceRecoveryTarget(
     val expectedColumnX: Float?,
     val originalText: String,
     val originalAmountMinor: Long,
-    val originalConfidence: Float?
+    val originalConfidence: Float?,
+    val role: NumericCellRole = NumericCellRole.LINE_TOTAL
 )
+
+enum class NumericCellRole { UNIT_PRICE, WEIGHT, LINE_TOTAL }
 
 enum class ReceiptTotalConsistency { NOT_AVAILABLE, MATCH, MISMATCH }
 
@@ -39,7 +42,8 @@ data class ParsedReceipt(
     val totalConsistency: ReceiptTotalConsistency,
     val recoveryTargets: List<PriceRecoveryTarget> = emptyList(),
     val detectedTotalReliable: Boolean = false,
-    val hasAdjustments: Boolean = false
+    val hasAdjustments: Boolean = false,
+    val tableDebugDetails: String = ""
 )
 
 class ReceiptParser {
@@ -53,15 +57,26 @@ class ReceiptParser {
         val totalCandidates = detectReceiptTotals(rows.filter(::isSummaryRow))
         val selectedTotal = totalCandidates.maxWithOrNull(compareBy<TotalCandidate> { it.priority }.thenBy(TotalCandidate::y))
         val detectedTotal = selectedTotal?.amountMinor
-        val candidateRows = rows.filter(::canBeProductRow)
+        val footerStart = findFooterStart(rows)
+        val tableHeader = findTableHeader(rows)
+        val firstProductRow = tableHeader?.rowIndex?.plus(1) ?: 0
+        val candidateRows = rows.filter { row ->
+            row.index in firstProductRow until footerStart && canBeProductRow(row) && !looksLikeTableHeader(row)
+        }
         val receiptWidth = fragments.mapNotNull { it.box?.right }.maxOrNull()
             ?.minus(fragments.mapNotNull { it.box?.left }.minOrNull() ?: 0f)
             ?.coerceAtLeast(1f)
         val columns = inferNumericColumns(candidateRows, receiptWidth)
         val lineTotalColumn = chooseLineTotalColumn(columns, candidateRows, detectedTotal)
-        val rowItems = candidateRows.mapNotNull { row -> parseProductRow(row, columns, lineTotalColumn) }
-        val locatedItems = deduplicateItems(attachWrappedNames(rowItems, rows))
-        val items = locatedItems.map { ParsedReceiptItem(it.name, it.amountMinor) }
+        val arithmeticColumns = inferHeaderArithmeticColumns(tableHeader, candidateRows, receiptWidth)
+            ?: inferArithmeticColumns(candidateRows, receiptWidth)
+        val rowItems = candidateRows.mapNotNull { row ->
+            parseProductRow(row, columns, lineTotalColumn, arithmeticColumns, tableHeader)
+        }
+        val locatedItems = deduplicateItems(attachWrappedNames(rowItems, rows, firstProductRow))
+        val items = locatedItems.map {
+            ParsedReceiptItem(it.name, it.amountMinor, it.priceSource, it.requiresReview)
+        }
         val itemTotal = items.fold(0L) { total, item -> total + item.amountMinor }
         val consistency = when {
             detectedTotal == null -> ReceiptTotalConsistency.NOT_AVAILABLE
@@ -70,8 +85,7 @@ class ReceiptParser {
         }
         val rowTexts = rows.flatMap(LogicalRow::textVariants)
         val date = rowTexts.asSequence().mapNotNull(::parseDate).firstOrNull()
-        val merchant = rows.asSequence().take(6).map(LogicalRow::preferredText)
-            .firstOrNull(::isMerchantCandidate)
+        val merchant = reconstructMerchant(rows)
 
         return ParsedReceipt(
             merchant = merchant,
@@ -79,25 +93,89 @@ class ReceiptParser {
             items = items,
             detectedTotalMinor = detectedTotal,
             totalConsistency = consistency,
-            recoveryTargets = locatedItems.mapIndexed { itemIndex, item ->
-                PriceRecoveryTarget(
+            recoveryTargets = locatedItems.flatMapIndexed { itemIndex, item ->
+                val row = rows.getOrNull(item.rowIndex)
+                val decimals = row?.decimalCells().orEmpty()
+                val supporting = if (arithmeticColumns?.headerAnchored == true) {
+                    listOf(
+                        NumericCellRole.UNIT_PRICE to arithmeticColumns.unitPrice.cellFor(decimals),
+                        NumericCellRole.WEIGHT to arithmeticColumns.weight.cellFor(decimals)
+                    ).mapNotNull { (role, cell) ->
+                        cell?.let {
+                            PriceRecoveryTarget(
+                                itemIndex = itemIndex,
+                                rowBoundingBox = item.box,
+                                priceBoundingBox = it.boundingBox,
+                                expectedColumnX = it.x,
+                                originalText = it.raw,
+                                originalAmountMinor = 0L,
+                                originalConfidence = it.confidence,
+                                role = role
+                            )
+                        }
+                    }
+                } else emptyList()
+                supporting + PriceRecoveryTarget(
                     itemIndex = itemIndex,
                     rowBoundingBox = item.box,
                     priceBoundingBox = item.priceBox,
                     expectedColumnX = item.expectedColumnX,
                     originalText = item.originalPriceText,
-                    originalAmountMinor = item.amountMinor,
-                    originalConfidence = item.priceConfidence
+                    originalAmountMinor = item.originalAmountMinor,
+                    originalConfidence = item.priceConfidence,
+                    role = NumericCellRole.LINE_TOTAL
                 )
             },
             detectedTotalReliable = isReliableTotal(selectedTotal, totalCandidates),
-            hasAdjustments = rows.any(::isAdjustmentRow)
+            hasAdjustments = rows.any(::isAdjustmentRow),
+            tableDebugDetails = buildTableDebugDetails(tableHeader, candidateRows, arithmeticColumns, locatedItems)
         )
     }
 
+    private fun findTableHeader(rows: List<LogicalRow>): TableHeader? = rows.asSequence().mapNotNull { row ->
+        val roleCenters = mutableMapOf<TableColumnRole, Float>()
+        row.fragments.forEach { fragment ->
+            val center = fragment.box?.let { (it.left + it.right) / 2f } ?: return@forEach
+            val normalized = normalizeForKeywords(fragment.text)
+            when {
+                ITEM_HEADER_KEYWORDS.any(normalized::contains) -> roleCenters[TableColumnRole.ITEM] = center
+                UNIT_HEADER_KEYWORDS.any(normalized::contains) -> roleCenters[TableColumnRole.UNIT_PRICE] = center
+                WEIGHT_HEADER_KEYWORDS.any(normalized::contains) -> roleCenters[TableColumnRole.WEIGHT] = center
+                TOTAL_HEADER_KEYWORDS.any(normalized::contains) -> roleCenters[TableColumnRole.LINE_TOTAL] = center
+            }
+        }
+        if (roleCenters.keys.containsAll(TableColumnRole.entries)) TableHeader(row.index, roleCenters) else null
+    }.firstOrNull()
+
+    private fun inferHeaderArithmeticColumns(
+        header: TableHeader?,
+        rows: List<LogicalRow>,
+        receiptWidth: Float?
+    ): ArithmeticColumns? {
+        if (header == null || receiptWidth == null) return null
+        val tolerance = max(MIN_COLUMN_TOLERANCE, receiptWidth * HEADER_COLUMN_TOLERANCE_RATIO)
+        fun column(role: TableColumnRole): DecimalColumn {
+            val center = checkNotNull(header.centers[role])
+            val cells = rows.flatMap { it.decimalCells() }.filter { cell ->
+                cell.x != null && abs(cell.x - center) <= tolerance
+            }
+            return DecimalColumn(center, cells, cells.map(DecimalCell::rowIndex).distinct().size, tolerance)
+        }
+        val unit = column(TableColumnRole.UNIT_PRICE)
+        val weight = column(TableColumnRole.WEIGHT)
+        val total = column(TableColumnRole.LINE_TOTAL)
+        if (unit.support == 0 || weight.support == 0) return null
+        val arithmeticSupport = rows.count { arithmeticEvidence(it, unit, weight, total) != null }
+        return ArithmeticColumns(unit, weight, total, arithmeticSupport, headerAnchored = true)
+    }
+
     private fun toFragment(line: OcrLine): Fragment? {
-        if (line.confidence != null && line.confidence < MIN_CONFIDENCE) return null
         val text = normalizeDigits(line.text).replace(WHITESPACE_REGEX, " ").trim()
+        if (line.confidence != null && line.confidence < MIN_CONFIDENCE) {
+            val retainWeakTableName = line.confidence >= MIN_WEAK_TEXT_CONFIDENCE && LETTER_REGEX.containsMatchIn(text) &&
+                line.boundingBox != null
+            if (!retainWeakTableName) return null
+        }
         return text.takeIf(String::isNotBlank)?.let { Fragment(it, line.boundingBox, line.confidence) }
     }
 
@@ -144,6 +222,17 @@ class ReceiptParser {
         val overlap = overlapRatio(row.top, row.bottom, candidate.top, candidate.bottom)
         val centerDistance = abs(row.centerY - candidate.centerY)
         return overlap >= ROW_VERTICAL_OVERLAP || centerDistance <= max(row.height, candidate.height) * ROW_CENTER_TOLERANCE
+    }
+
+    private fun findFooterStart(rows: List<LogicalRow>): Int {
+        var sawProductLikeRow = false
+        rows.forEach { row ->
+            if (isSummaryRow(row) && row.decimalCells().isNotEmpty() && sawProductLikeRow) return row.index
+            if (!isSummaryRow(row) && LETTER_REGEX.containsMatchIn(row.preferredText) && row.numericCells().isNotEmpty()) {
+                sawProductLikeRow = true
+            }
+        }
+        return Int.MAX_VALUE
     }
 
     private fun detectReceiptTotals(summaryRows: List<LogicalRow>): List<TotalCandidate> = summaryRows.mapNotNull { row ->
@@ -217,27 +306,198 @@ class ReceiptParser {
         }
     }
 
-    private fun parseProductRow(row: LogicalRow, columns: List<NumericColumn>, lineTotalColumn: NumericColumn?): RowItem? {
+    private fun inferArithmeticColumns(
+        rows: List<LogicalRow>,
+        receiptWidth: Float?
+    ): ArithmeticColumns? {
+        if (receiptWidth == null) return null
+        val tolerance = max(MIN_COLUMN_TOLERANCE, receiptWidth * COLUMN_TOLERANCE_RATIO)
+        val clusters = mutableListOf<MutableList<DecimalCell>>()
+        rows.flatMap { it.decimalCells() }
+            .filter { it.x != null && it.columnLikeFragment }
+            .sortedBy(DecimalCell::x)
+            .forEach { cell ->
+                val x = checkNotNull(cell.x)
+                val cluster = clusters.minByOrNull { cells ->
+                    abs(cells.mapNotNull(DecimalCell::x).average().toFloat() - x)
+                }?.takeIf { cells ->
+                    abs(cells.mapNotNull(DecimalCell::x).average().toFloat() - x) <= tolerance
+                }
+                if (cluster == null) clusters += mutableListOf(cell) else cluster += cell
+            }
+        val columns = clusters.map { cells ->
+            DecimalColumn(
+                centerX = cells.mapNotNull(DecimalCell::x).average().toFloat(),
+                cells = cells,
+                support = cells.map(DecimalCell::rowIndex).distinct().size
+            )
+        }.filter { it.support >= MIN_COLUMN_SUPPORT }
+        if (columns.size < 3) return null
+
+        val candidates = mutableListOf<ArithmeticColumns>()
+        columns.forEach { unit ->
+            columns.filterNot { it === unit }.forEach { weight ->
+                columns.filterNot { it === unit || it === weight }.forEach { total ->
+                    val evidenceRows = rows.count { row ->
+                        arithmeticEvidence(row, unit, weight, total)?.isConsistent == true
+                    }
+                    if (evidenceRows >= MIN_ARITHMETIC_SUPPORT) {
+                        candidates += ArithmeticColumns(unit, weight, total, evidenceRows)
+                    }
+                }
+            }
+        }
+        return candidates.maxWithOrNull(
+            compareBy<ArithmeticColumns> { it.support }
+                .thenBy { it.unitPrice.support + it.weight.support + it.lineTotal.support }
+        )
+    }
+
+    private fun arithmeticEvidence(
+        row: LogicalRow,
+        columns: ArithmeticColumns
+    ): ArithmeticEvidence? = arithmeticEvidence(
+        row,
+        columns.unitPrice,
+        columns.weight,
+        columns.lineTotal
+    )
+
+    private fun arithmeticEvidence(
+        row: LogicalRow,
+        unitColumn: DecimalColumn,
+        weightColumn: DecimalColumn,
+        totalColumn: DecimalColumn
+    ): ArithmeticEvidence? {
+        val cells = row.decimalCells()
+        val unit = unitColumn.cellFor(cells) ?: return null
+        val weight = weightColumn.cellFor(cells) ?: return null
+        val total = totalColumn.cellFor(cells) ?: return null
+        if (unit.value < MIN_UNIT_PRICE || weight.value !in MIN_WEIGHT..MAX_WEIGHT) return null
+        val calculated = unit.value.multiply(weight.value).setScale(2, RoundingMode.HALF_UP)
+        val observed = total.value.setScale(2, RoundingMode.HALF_UP)
+        val differenceMinor = calculated.subtract(observed).abs().movePointRight(2).longValueExact()
+        return ArithmeticEvidence(unit, weight, total, calculated, differenceMinor <= ARITHMETIC_TOLERANCE_MINOR)
+    }
+
+    private fun parseProductRow(
+        row: LogicalRow,
+        columns: List<NumericColumn>,
+        lineTotalColumn: NumericColumn?,
+        arithmeticColumns: ArithmeticColumns?,
+        tableHeader: TableHeader?
+    ): RowItem? {
         if (!canBeProductRow(row)) return null
         val cells = row.numericCells()
-        val selected = lineTotalColumn?.cellFor(cells) ?: chooseFallbackPrice(row, cells) ?: return null
-        if (selected.amountMinor <= 0L) return null
-        val learnedCells = if (columns.isEmpty()) listOf(selected) else cells.filter { cell ->
+        val decimals = row.decimalCells()
+        val arithmetic = arithmeticColumns?.let { arithmeticEvidence(row, it) }
+        val calculatedWithoutTotal = arithmeticColumns?.takeIf(ArithmeticColumns::headerAnchored)?.let { schema ->
+            val unit = schema.unitPrice.cellFor(decimals)
+            val weight = schema.weight.cellFor(decimals)
+            if (unit != null && weight != null && unit.value >= MIN_UNIT_PRICE && weight.value in MIN_WEIGHT..MAX_WEIGHT) {
+                unit.value.multiply(weight.value).setScale(2, RoundingMode.HALF_UP)
+            } else null
+        }
+        val arithmeticTotalCell = arithmetic?.lineTotal?.let { decimal ->
+            cells.minByOrNull { cell -> abs((cell.x ?: decimal.x ?: 0f) - (decimal.x ?: 0f)) }
+                ?.takeIf { cell -> cell.x != null && decimal.x != null && abs(cell.x - decimal.x) <= MIN_COLUMN_TOLERANCE }
+        }
+        val schemaTotalCell = arithmeticColumns?.lineTotal?.cellFor(decimals)?.let { decimal ->
+            decimal.toNumericCell(row)
+        }
+        val selected = schemaTotalCell ?: arithmeticTotalCell ?: if (arithmeticColumns?.headerAnchored == true) null
+        else lineTotalColumn?.cellFor(cells) ?: chooseFallbackPrice(row, cells)
+        val calculatedWithoutTotalMinor = calculatedWithoutTotal?.movePointRight(2)?.longValueExact()
+        if (selected == null && (calculatedWithoutTotalMinor == null || calculatedWithoutTotalMinor !in MIN_PRICE_MINOR..MAX_PRICE_MINOR)) return null
+        if (selected != null && selected.amountMinor <= 0L) return null
+        val learnedCells = if (columns.isEmpty()) listOfNotNull(selected) else cells.filter { cell ->
             cell.x != null && columns.any { column -> abs(column.centerX - cell.x) <= column.matchTolerance }
-        }.ifEmpty { listOf(selected) }
-        val remove = (learnedCells + selected).distinctBy { Triple(it.fragmentIndex, it.range.first, it.range.last) }
-        val name = buildProductName(row, remove)
+        }.ifEmpty { listOfNotNull(selected) }
+        val remove = (learnedCells + listOfNotNull(selected)).map { CellRange(it.fragmentIndex, it.range) }.toMutableList()
+        if (cells.size >= 2) {
+            row.decimalCells()
+                .filter { it.raw.substringAfter('.', "").length == 3 && it.value in MIN_WEIGHT..MAX_WEIGHT }
+                .mapTo(remove) { CellRange(it.fragmentIndex, it.range) }
+        }
+        if (arithmeticColumns != null) {
+            listOf(arithmeticColumns.unitPrice, arithmeticColumns.weight, arithmeticColumns.lineTotal)
+                .mapNotNull { it.cellFor(decimals) }
+                .mapTo(remove) {
+                    CellRange(
+                        it.fragmentIndex,
+                        if (it.columnLikeFragment) row.fragments[it.fragmentIndex].text.indices else it.range
+                    )
+                }
+        }
+        val name = if (tableHeader != null) buildProductNameFromItemColumn(row, tableHeader, remove)
+        else buildProductName(row, remove)
         if (!isValidProductName(name)) return null
+        val calculatedMinor = arithmetic?.calculatedTotal?.movePointRight(2)?.longValueExact()
+        val useArithmeticRecovery = arithmetic != null && !arithmetic.isConsistent && calculatedMinor != null &&
+            calculatedMinor in MIN_PRICE_MINOR..MAX_PRICE_MINOR
+        val useMissingTotalRecovery = selected == null && calculatedWithoutTotalMinor != null
+        val finalAmount = when {
+            useMissingTotalRecovery -> checkNotNull(calculatedWithoutTotalMinor)
+            useArithmeticRecovery -> checkNotNull(calculatedMinor)
+            else -> checkNotNull(selected).amountMinor
+        }
         return RowItem(
             name = name,
-            amountMinor = selected.amountMinor,
+            amountMinor = finalAmount,
             rowIndex = row.index,
             box = row.box,
-            priceBox = selected.boundingBox,
-            expectedColumnX = lineTotalColumn?.centerX ?: selected.x,
-            originalPriceText = selected.raw,
-            priceConfidence = selected.confidence
+            priceBox = selected?.boundingBox,
+            expectedColumnX = arithmeticColumns?.lineTotal?.centerX ?: lineTotalColumn?.centerX ?: selected?.x,
+            originalPriceText = selected?.raw.orEmpty(),
+            originalAmountMinor = selected?.amountMinor ?: finalAmount,
+            priceConfidence = selected?.confidence,
+            priceSource = if (useArithmeticRecovery || useMissingTotalRecovery) {
+                PriceSource.ARITHMETIC_RECOVERY
+            } else {
+                PriceSource.OCR_ORIGINAL
+            },
+            requiresReview = useArithmeticRecovery || useMissingTotalRecovery
         )
+    }
+
+    private fun DecimalCell.toNumericCell(row: LogicalRow): NumericCell? {
+        val amount = runCatching {
+            value.setScale(2, RoundingMode.UNNECESSARY).movePointRight(2).longValueExact()
+        }.getOrNull() ?: return null
+        return NumericCell(
+            amountMinor = amount,
+            raw = raw,
+            x = x,
+            rowIndex = rowIndex,
+            fragmentIndex = fragmentIndex,
+            range = range,
+            isStrongMoney = raw.contains('.') || raw.contains(','),
+            confidence = confidence,
+            boundingBox = boundingBox
+        )
+    }
+
+    private fun buildProductNameFromItemColumn(
+        row: LogicalRow,
+        header: TableHeader,
+        cellsToRemove: List<CellRange>
+    ): String {
+        val itemX = checkNotNull(header.centers[TableColumnRole.ITEM])
+        val numericCenters = listOf(
+            TableColumnRole.UNIT_PRICE, TableColumnRole.WEIGHT, TableColumnRole.LINE_TOTAL
+        ).mapNotNull(header.centers::get)
+        val itemFragments = row.fragments.mapIndexedNotNull { index, fragment ->
+            val center = fragment.box?.let { (it.left + it.right) / 2f }
+            val belongsToItem = center == null || abs(center - itemX) <= numericCenters.minOf { abs(center - it) }
+            if (belongsToItem) index to fragment else null
+        }
+        if (itemFragments.isEmpty()) return ""
+        val subRow = row.copy(fragments = itemFragments.map { it.second })
+        val originalToSubIndex = itemFragments.mapIndexed { subIndex, pair -> pair.first to subIndex }.toMap()
+        val subRemovals = cellsToRemove.mapNotNull { removal ->
+            originalToSubIndex[removal.fragmentIndex]?.let { CellRange(it, removal.range) }
+        }
+        return buildProductName(subRow, subRemovals)
     }
 
     private fun chooseFallbackPrice(row: LogicalRow, cells: List<NumericCell>): NumericCell? {
@@ -258,8 +518,8 @@ class ReceiptParser {
         }
     }
 
-    private fun buildProductName(row: LogicalRow, cellsToRemove: List<NumericCell>): String {
-        val removalsByFragment = cellsToRemove.groupBy(NumericCell::fragmentIndex)
+    private fun buildProductName(row: LogicalRow, cellsToRemove: List<CellRange>): String {
+        val removalsByFragment = cellsToRemove.distinct().groupBy(CellRange::fragmentIndex)
         return row.fragments.mapIndexedNotNull { index, fragment ->
             val chars = fragment.text.toCharArray()
             removalsByFragment[index].orEmpty().forEach { cell ->
@@ -274,7 +534,7 @@ class ReceiptParser {
             .trim()
     }
 
-    private fun attachWrappedNames(items: List<RowItem>, rows: List<LogicalRow>): List<RowItem> {
+    private fun attachWrappedNames(items: List<RowItem>, rows: List<LogicalRow>, firstProductRow: Int): List<RowItem> {
         if (items.isEmpty()) return items
         val byRow = items.associateBy(RowItem::rowIndex)
         val claimed = mutableSetOf<Int>()
@@ -282,7 +542,7 @@ class ReceiptParser {
             val prefixes = mutableListOf<String>()
             var previousIndex = item.rowIndex - 1
             var nextBox = item.box
-            while (previousIndex >= 0 && prefixes.size < MAX_WRAPPED_LINES) {
+            while (previousIndex >= firstProductRow && prefixes.size < MAX_WRAPPED_LINES) {
                 if (byRow.containsKey(previousIndex) || previousIndex in claimed) break
                 val row = rows[previousIndex]
                 if (!looksLikeContinuation(row) || !areVerticallyAdjacent(row.box, nextBox)) break
@@ -357,6 +617,62 @@ class ReceiptParser {
         return text.count(Char::isDigit) <= text.length / 3
     }
 
+    private fun reconstructMerchant(rows: List<LogicalRow>): String? {
+        val headerRows = rows.takeWhile { row ->
+            !DATE_REGEX.containsMatchIn(row.preferredText) && !looksLikeTableHeader(row)
+        }.take(MAX_HEADER_ROWS)
+        val candidates = headerRows.filter { isMerchantCandidate(it.preferredText) }
+        val first = candidates.firstOrNull() ?: return null
+        val second = candidates.drop(1).firstOrNull { candidate ->
+            areVerticallyAdjacent(first.box, candidate.box) &&
+                candidate.preferredText.count(Char::isDigit) <= candidate.preferredText.length / 5
+        }
+        return listOfNotNull(first.preferredText, second?.preferredText)
+            .joinToString(" ")
+            .replace(WHITESPACE_REGEX, " ")
+            .trim()
+    }
+
+    private fun looksLikeTableHeader(row: LogicalRow): Boolean {
+        val normalized = normalizeForKeywords(row.preferredText)
+        return TABLE_HEADER_KEYWORDS.count(normalized::contains) >= 2
+    }
+
+    private fun buildTableDebugDetails(
+        header: TableHeader?,
+        rows: List<LogicalRow>,
+        columns: ArithmeticColumns?,
+        items: List<RowItem>
+    ): String = buildString {
+        appendLine("Receipt table")
+        appendLine("headerRow=${header?.rowIndex} centers=${header?.centers}")
+        appendLine(
+            "schema unit=${columns?.unitPrice?.centerX} weight=${columns?.weight?.centerX} " +
+                "lineTotal=${columns?.lineTotal?.centerX} headerAnchored=${columns?.headerAnchored}"
+        )
+        rows.forEach { row ->
+            val decimals = row.decimalCells().joinToString { "${it.raw}@${it.x}" }
+            val item = items.firstOrNull { it.rowIndex == row.index }
+            val arithmetic = columns?.let { arithmeticEvidence(row, it) }
+            val assigned = columns?.let { schema ->
+                val cells = row.decimalCells()
+                "unit=${schema.unitPrice.cellFor(cells)?.let { "${it.raw}@${it.x}" }} " +
+                    "weight=${schema.weight.cellFor(cells)?.let { "${it.raw}@${it.x}" }} " +
+                    "lineTotal=${schema.lineTotal.cellFor(cells)?.let { "${it.raw}@${it.x}" }}"
+            }
+            val arithmeticError = arithmetic?.let {
+                it.calculatedTotal.subtract(it.lineTotal.value.setScale(2, RoundingMode.HALF_UP)).abs()
+            }
+            appendLine(
+                "row=${row.index} y=${row.box?.top}..${row.box?.bottom} " +
+                    "tokens=${row.fragments.joinToString { "${it.text}@${it.box}" }} decimals=[$decimals] $assigned " +
+                    "item=${item?.name} selected=${item?.originalPriceText}/${item?.amountMinor} " +
+                    "source=${item?.priceSource} arithmetic=${arithmetic?.calculatedTotal} " +
+                    "error=$arithmeticError consistent=${arithmetic?.isConsistent}"
+            )
+        }
+    }
+
     private fun parseDate(text: String): LocalDate? {
         val match = DATE_REGEX.find(text) ?: return null
         val first = match.groupValues[1].toIntOrNull() ?: return null
@@ -384,6 +700,51 @@ class ReceiptParser {
                 boundingBox = numericTokenBox(fragment.box, match.range, fragment.text.length)
             )
         }
+    }
+
+    private fun LogicalRow.decimalCells(): List<DecimalCell> = fragments.flatMapIndexed { fragmentIndex, fragment ->
+        decimalMatches(fragment.text).mapNotNull { match ->
+            if (isPartOfDateOrTime(fragment.text, match.range)) return@mapNotNull null
+            val value = runCatching { BigDecimal(match.normalized.replace(",", "")) }.getOrNull()
+                ?: return@mapNotNull null
+            val box = fragment.box
+            val centerRatio = (match.range.first + match.range.last + 1f) /
+                (2f * fragment.text.length.coerceAtLeast(1))
+            DecimalCell(
+                value = value,
+                raw = match.raw,
+                x = box?.let { it.left + it.width * centerRatio },
+                rowIndex = index,
+                fragmentIndex = fragmentIndex,
+                range = match.range,
+                confidence = fragment.confidence,
+                boundingBox = numericTokenBox(box, match.range, fragment.text.length),
+                columnLikeFragment = fragment.text.count(Char::isLetter) <= 1 && fragment.text.any(Char::isDigit)
+            )
+        }.toList()
+    }
+
+    private fun decimalMatches(text: String): List<DecimalMatch> {
+        val trimmed = text.trim()
+        if (trimmed.any(Char::isDigit) && trimmed.any { it == '.' || it == ',' } &&
+            NUMERIC_OCR_CELL_REGEX.matches(trimmed)
+        ) {
+            val repaired = trimmed.map { character ->
+                when (character) {
+                    'O', 'o' -> '0'
+                    'I', 'l', '|' -> '1'
+                    'B' -> '8'
+                    'S', 's' -> '5'
+                    else -> character
+                }
+            }.joinToString("").replace(" ", "")
+            if (STRICT_DECIMAL_CELL_REGEX.matches(repaired)) {
+                return listOf(DecimalMatch(trimmed, repaired, text.indices))
+            }
+        }
+        return DECIMAL_TOKEN_REGEX.findAll(text).map {
+            DecimalMatch(it.groupValues[1], it.groupValues[1], it.range)
+        }.toList()
     }
 
     private fun numericTokenBox(box: OcrBoundingBox?, range: IntRange, textLength: Int): OcrBoundingBox? {
@@ -511,6 +872,22 @@ class ReceiptParser {
         val boundingBox: OcrBoundingBox?
     )
 
+    private data class DecimalCell(
+        val value: BigDecimal,
+        val raw: String,
+        val x: Float?,
+        val rowIndex: Int,
+        val fragmentIndex: Int,
+        val range: IntRange,
+        val confidence: Float?,
+        val boundingBox: OcrBoundingBox?,
+        val columnLikeFragment: Boolean
+    )
+
+    private data class DecimalMatch(val raw: String, val normalized: String, val range: IntRange)
+
+    private data class CellRange(val fragmentIndex: Int, val range: IntRange)
+
     private data class NumericColumn(val centerX: Float, val cells: List<NumericCell>, val support: Int) {
         val matchTolerance = max(MIN_COLUMN_TOLERANCE, cells.mapNotNull(NumericCell::x).let { positions ->
             if (positions.isEmpty()) 0f else (positions.max() - positions.min()) + MIN_COLUMN_TOLERANCE
@@ -522,6 +899,41 @@ class ReceiptParser {
             ?.takeIf { abs(checkNotNull(it.x) - centerX) <= matchTolerance }
     }
 
+    private data class DecimalColumn(
+        val centerX: Float,
+        val cells: List<DecimalCell>,
+        val support: Int,
+        val fixedTolerance: Float? = null
+    ) {
+        val matchTolerance = fixedTolerance ?: max(MIN_COLUMN_TOLERANCE, cells.mapNotNull(DecimalCell::x).let { positions ->
+            if (positions.isEmpty()) 0f else (positions.max() - positions.min()) + MIN_COLUMN_TOLERANCE
+        })
+
+        fun cellFor(cells: List<DecimalCell>): DecimalCell? = cells
+            .filter { it.x != null }
+            .minByOrNull { abs(checkNotNull(it.x) - centerX) }
+            ?.takeIf { abs(checkNotNull(it.x) - centerX) <= matchTolerance }
+    }
+
+    private data class ArithmeticColumns(
+        val unitPrice: DecimalColumn,
+        val weight: DecimalColumn,
+        val lineTotal: DecimalColumn,
+        val support: Int,
+        val headerAnchored: Boolean = false
+    )
+
+    private enum class TableColumnRole { ITEM, UNIT_PRICE, WEIGHT, LINE_TOTAL }
+    private data class TableHeader(val rowIndex: Int, val centers: Map<TableColumnRole, Float>)
+
+    private data class ArithmeticEvidence(
+        val unitPrice: DecimalCell,
+        val weight: DecimalCell,
+        val lineTotal: DecimalCell,
+        val calculatedTotal: BigDecimal,
+        val isConsistent: Boolean
+    )
+
     private data class RowItem(
         val name: String,
         val amountMinor: Long,
@@ -530,7 +942,10 @@ class ReceiptParser {
         val priceBox: OcrBoundingBox?,
         val expectedColumnX: Float?,
         val originalPriceText: String,
-        val priceConfidence: Float?
+        val originalAmountMinor: Long,
+        val priceConfidence: Float?,
+        val priceSource: PriceSource,
+        val requiresReview: Boolean
     )
     private data class TotalCandidate(
         val priority: Int,
@@ -541,35 +956,50 @@ class ReceiptParser {
 
     private companion object {
         const val MIN_CONFIDENCE = 0.35f
+        const val MIN_WEAK_TEXT_CONFIDENCE = 0.15f
         const val ROW_VERTICAL_OVERLAP = 0.4f
         const val ROW_CENTER_TOLERANCE = 0.55f
         const val COLUMN_TOLERANCE_RATIO = 0.045f
+        const val HEADER_COLUMN_TOLERANCE_RATIO = 0.065f
         const val MIN_COLUMN_TOLERANCE = 14f
         const val MIN_COLUMN_SUPPORT = 2
+        const val MIN_ARITHMETIC_SUPPORT = 2
         const val DUPLICATE_TEXT_SIMILARITY = 0.86
         const val WRAPPED_LINE_GAP_RATIO = 0.8f
         const val MAX_WRAPPED_LINES = 2
         const val MAX_PRODUCT_NAME_LENGTH = 120
         const val TOTAL_TOLERANCE_MINOR = 2L
         const val RELIABLE_TOTAL_CONFIDENCE = 0.82f
+        const val ARITHMETIC_TOLERANCE_MINOR = 2L
+        const val MIN_PRICE_MINOR = 1L
+        const val MAX_PRICE_MINOR = 100_000_000L
+        const val MAX_HEADER_ROWS = 6
+        val MIN_UNIT_PRICE: BigDecimal = BigDecimal("0.01")
+        val MIN_WEIGHT: BigDecimal = BigDecimal("0.001")
+        val MAX_WEIGHT: BigDecimal = BigDecimal("1000")
         val OcrBoundingBox.height get() = (bottom - top).coerceAtLeast(1f)
         val OcrBoundingBox.width get() = (right - left).coerceAtLeast(1f)
         val LETTER_REGEX = Regex("[A-Za-z\\p{IsArabic}]")
         val WHITESPACE_REGEX = Regex("\\s+")
-        val DATE_REGEX = Regex("\\b(\\d{4}|\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})\\b")
+        val DATE_REGEX = Regex("\\b(\\d{4}|\\d{1,2})[./-](\\d{1,2})[./-](\\d{2,4})\\b")
         val TIME_REGEX = Regex("\\b\\d{1,2}:\\d{2}(?::\\d{2})?\\b")
         val LONG_NUMBER_REGEX = Regex("(?<!\\d)\\d{7,}(?!\\d)")
         val MONEY_TOKEN_REGEX = Regex("(?<![\\d.,])(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?)(?![\\d.,])")
+        val DECIMAL_TOKEN_REGEX = Regex("(?<![\\d.,])(\\d{1,3}(?:,\\d{3})*(?:\\.\\d{1,3})?|\\d+(?:\\.\\d{1,3})?)(?![\\d.,])")
+        val NUMERIC_OCR_CELL_REGEX = Regex("[0-9OoIl|BSs., ]{2,}")
+        val STRICT_DECIMAL_CELL_REGEX = Regex("(?:\\d{1,3}(?:,\\d{3})*|\\d+)(?:\\.\\d{1,3})?")
         val SUMMARY_ENGLISH_REGEX = Regex(
-            "(?i)(?:^|[^a-z])(?:grand\\s+total|sub\\s*total|net(?:\\s+(?:total|required))?|amount\\s+due|total\\s+due|cash|change|tax|vat|discount|total)(?:$|[^a-z])"
+            "(?i)(?:^|[^a-z])(?:grand\\s+total|sub\\s*total|net(?:\\s+(?:total|required))?|amount\\s+due|total\\s+due|paid|remaining|balance|cash|change|tax|vat|discount|total)(?:$|[^a-z])"
         )
         val SUMMARY_ARABIC_KEYWORDS = listOf(
             "الاجمالي", "اجمالي", "الصافي", "الصافي المطلوب", "المطلوب", "اجمالي المطلوب",
-            "الخصم", "الضريبة", "الضريبه", "القيمة المضافة", "القيمه المضافه", "نقدي", "الباقي"
+            "المجموع", "المبلغ", "المدفوع", "متبقي", "المتبقي", "الخصم", "الضريبة", "الضريبه",
+            "القيمة المضافة", "القيمه المضافه", "نقدي", "كاش", "الباقي"
         )
-        val ADJUSTMENT_ENGLISH_REGEX = Regex("(?i)(?:^|[^a-z])(?:cash|change|tax|vat|discount)(?:$|[^a-z])")
+        val ADJUSTMENT_ENGLISH_REGEX = Regex("(?i)(?:^|[^a-z])(?:paid|remaining|balance|cash|change|tax|vat|discount)(?:$|[^a-z])")
         val ADJUSTMENT_ARABIC_KEYWORDS = listOf(
-            "الخصم", "الضريبة", "الضريبه", "القيمة المضافة", "القيمه المضافه", "نقدي", "الباقي"
+            "المدفوع", "متبقي", "المتبقي", "الخصم", "الضريبة", "الضريبه",
+            "القيمة المضافة", "القيمه المضافه", "نقدي", "كاش", "الباقي"
         )
         val REQUIRED_TOTAL_KEYWORDS = listOf("grand total", "amount due", "total due", "net required", "الصافي المطلوب", "اجمالي المطلوب", "المطلوب")
         val PRIMARY_TOTAL_KEYWORDS = listOf("net total", "total", "الاجمالي", "اجمالي", "الصافي")
@@ -579,9 +1009,14 @@ class ReceiptParser {
         )
         val QUANTITY_LABEL_REGEX = Regex("(?i)(?:\\bqty\\b|\\bquantity\\b|\\bعدد\\b|\\bكميه\\b)")
         val QUANTITY_ONLY_CONTENT_REGEX = Regex("(?i)(?:\\bqty\\b|\\bquantity\\b|\\bعدد\\b|\\bكميه\\b|\\d+(?:[.,]\\d+)?|x|[|*×@:=+-])")
-        val CURRENCY_REGEX = Regex("(?i)(?:EGP|L\\.?E\\.?|ج(?:نيه)?|جم)")
-        val CURRENCY_ONLY_REGEX = Regex("(?i)\\s*(?:EGP|L\\.?E\\.?|ج(?:نيه)?|جم)?\\s*")
+        val CURRENCY_REGEX = Regex("(?i)(?:(?<![A-Za-z])(?:EGP|L\\.?E\\.?)(?![A-Za-z])|جنيه|ج\\s*م)")
+        val CURRENCY_ONLY_REGEX = Regex("(?i)\\s*(?:EGP|L\\.?E\\.?|جنيه|ج\\s*م|ج)?\\s*")
         val SEPARATOR_REGEX = Regex("[|•]{1,}")
         val ARABIC_DIACRITICS_REGEX = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]")
+        val TABLE_HEADER_KEYWORDS = listOf("الصنف", "السعر", "الوزن", "القيمة", "القيمه")
+        val ITEM_HEADER_KEYWORDS = listOf("الصنف", "المنتج", "الوصف", "item", "description")
+        val UNIT_HEADER_KEYWORDS = listOf("السعر", "سعر الوحدة", "unit price", "price")
+        val WEIGHT_HEADER_KEYWORDS = listOf("الوزن", "وزن", "weight", "qty", "quantity")
+        val TOTAL_HEADER_KEYWORDS = listOf("القيمة", "القيمه", "line total", "amount", "value")
     }
 }

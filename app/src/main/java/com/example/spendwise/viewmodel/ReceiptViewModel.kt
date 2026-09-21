@@ -18,6 +18,10 @@ import com.example.spendwise.ocr.PriceSource
 import com.example.spendwise.ocr.ReceiptNumericRecovery
 import com.example.spendwise.ocr.ReceiptParser
 import com.example.spendwise.suggestion.CategorySuggestion
+import com.example.spendwise.suggestion.CategorySuggestionPipeline
+import com.example.spendwise.suggestion.LexicalCategorySuggestionEngine
+import com.example.spendwise.suggestion.OnnxSemanticEmbedder
+import com.example.spendwise.suggestion.SemanticCategorySuggestionEngine
 import com.example.spendwise.suggestion.UserLearnedCategorySuggestionEngine
 import android.net.Uri
 import java.time.LocalDate
@@ -55,6 +59,7 @@ data class ReceiptDraftUiState(
     val ocrState: ReceiptOcrState = ReceiptOcrState.IDLE,
     val ocrMessage: String? = null,
     val ocrDebugDetails: String? = null,
+    val categoryDebugDetails: String? = null,
     val saveState: ReceiptSaveState = ReceiptSaveState.IDLE,
     val validationMessage: String? = null
 ) {
@@ -66,7 +71,14 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
     private val transactionRepository = TransactionRepository(database.transactionDao())
     private val categoryRepository = CategoryRepository(database.categoryDao())
     private val mappingRepository = ItemCategoryMappingRepository(database.itemCategoryMappingDao())
-    private val categorySuggestionEngine = UserLearnedCategorySuggestionEngine(mappingRepository)
+    private val categorySuggestionPipeline = CategorySuggestionPipeline(
+        userLearned = UserLearnedCategorySuggestionEngine(mappingRepository),
+        lexical = LexicalCategorySuggestionEngine(),
+        semantic = SemanticCategorySuggestionEngine(
+            embedder = OnnxSemanticEmbedder.get(application),
+            mappings = mappingRepository
+        )
+    )
     private val ocrEngine = OcrEngineProvider.get(application)
     private val receiptParser = ReceiptParser()
     private val numericRecovery = ReceiptNumericRecovery()
@@ -120,12 +132,13 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
                     val recovered = numericRecovery.recover(parsed, numericCandidates)
                     val finalReceipt = recovered.receipt
                     val activeCategories = categoryRepository.getActiveCategories()
-                    val suggestedItems = finalReceipt.items.map { item ->
-                        val suggestion = categorySuggestionEngine.suggest(
-                            itemName = item.name,
-                            merchant = finalReceipt.merchant,
-                            availableCategories = activeCategories
-                        )
+                    val suggestionResult = categorySuggestionPipeline.suggestAll(
+                        itemNames = finalReceipt.items.map { it.name },
+                        merchant = finalReceipt.merchant,
+                        availableCategories = activeCategories
+                    )
+                    val suggestedItems = finalReceipt.items.mapIndexed { index, item ->
+                        val suggestion = suggestionResult.suggestions[index]
                         ReceiptItemDraft(
                             id = nextItemId.getAndIncrement(),
                             name = item.name,
@@ -148,10 +161,11 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
                             "Detected values are suggestions. Review and edit them before saving."
                         },
                         ocrDebugDetails = if (isDebuggable) {
-                            buildOcrDebugDetails(result, recovered.debugEntries)
+                            buildOcrDebugDetails(result, finalReceipt.tableDebugDetails, recovered.debugEntries)
                         } else {
                             null
-                        }
+                        },
+                        categoryDebugDetails = suggestionResult.debugDetails.takeIf { isDebuggable && it.isNotBlank() }
                     )
                 }
             } catch (cancellation: CancellationException) {
@@ -266,12 +280,14 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
 
 private fun buildOcrDebugDetails(
     result: com.example.spendwise.ocr.OcrResult,
+    tableDetails: String,
     recoveries: List<NumericRecoveryDebugEntry>
 ): String = buildString {
     appendLine("Raw OCR (${result.imageWidth ?: "?"} x ${result.imageHeight ?: "?"})")
     result.lines.forEach { line ->
         appendLine("${line.text} | confidence=${line.confidence} | box=${line.boundingBox}")
     }
+    if (tableDetails.isNotBlank()) appendLine(tableDetails)
     if (recoveries.isNotEmpty()) appendLine("Numeric recovery")
     recoveries.forEach { recovery ->
         appendLine("item=${recovery.itemName} row=${recovery.rowBoundingBox}")

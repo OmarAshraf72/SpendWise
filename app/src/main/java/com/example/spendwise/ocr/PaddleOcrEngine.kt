@@ -81,7 +81,8 @@ class PaddleOcrEngine(private val context: Context) : OcrEngine, NumericOcrEngin
                                             text = line.text,
                                             confidence = line.confidence ?: 0f,
                                             preprocessing = variant.name,
-                                            boundingBox = target.priceBoundingBox ?: sourceBox
+                                            boundingBox = target.priceBoundingBox ?: sourceBox,
+                                            role = target.role
                                         )
                                     )
                                 } finally {

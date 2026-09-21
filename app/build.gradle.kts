@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.onnxruntime.android)
     implementation(files("libs/PaddlePredictor.jar"))
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

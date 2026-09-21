@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "model": "alphaedge-ai/multilingual-e5-small-arb-32768",
+  "source_revision": "e1b3907e6c8304b83d081c12b76718f5df6e2ac2",
+  "runtime": "ONNX Runtime Android CPU",
+  "quantization": {
+    "mode": "dynamic",
+    "weight_type": "QInt8",
+    "per_channel": true
+  },
+  "graph_contract": {
+    "inputs": {
+      "input_ids": "tensor(int64)[batch,sequence]",
+      "attention_mask": "tensor(int64)[batch,sequence]"
+    },
+    "output": "sentence_embedding",
+    "embedding_dimension": 384,
+    "pooling_in_graph": true,
+    "l2_normalization_in_graph": true
+  },
+  "text_contract": {
+    "tokenizer": "Unigram tokenizer.json",
+    "normalization": "NFKC with exported metaspace contract",
+    "query_prefix": "query: ",
+    "passage_prefix": "passage: ",
+    "max_sequence_length": 128,
+    "truncation": "right",
+    "padding": "right, longest sequence in batch",
+    "special_token_ids": {
+      "bos": 0,
+      "pad": 1,
+      "eos": 2,
+      "unk": 3,
+      "mask": 32767
+    }
+  },
+  "prototype": {
+    "strategy": "HYBRID_PROTOTYPE",
+    "description_weight": 0.5,
+    "confirmed_example_centroid_weight": 0.5,
+    "semantic_score_gap_threshold": 0.01
+  },
+  "artifacts": {
+    "model": {
+      "path": "model.onnx",
+      "bytes": 34906112,
+      "sha256": "2969d0df424fb033b5b1beb67dc17665efc647733fd6bcbb4e011d77b41c603a"
+    },
+    "tokenizer_json": {
+      "path": "tokenizer/tokenizer.json",
+      "bytes": 2406512,
+      "sha256": "40b7d6f2e0b8b58a8ac14294b122a41560c61db46515a5f05871811892fc5f60"
+    },
+    "tokenizer_config": {
+      "path": "tokenizer/tokenizer_config.json",
+      "bytes": 393,
+      "sha256": "2f864891ced25a0c38dbfcea47b40e0681404d99be9cee78a31157f2cf7ff6e6"
+    }
+  }
+}

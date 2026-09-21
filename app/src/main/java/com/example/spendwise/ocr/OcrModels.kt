@@ -42,5 +42,6 @@ data class NumericOcrCandidate(
     val text: String,
     val confidence: Float,
     val preprocessing: String,
-    val boundingBox: OcrBoundingBox
+    val boundingBox: OcrBoundingBox,
+    val role: NumericCellRole = NumericCellRole.LINE_TOTAL
 )

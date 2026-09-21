@@ -1,199 +1,258 @@
 package com.example.spendwise.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.spendwise.data.parseEgpToMinor
+import com.example.spendwise.data.*
 import com.example.spendwise.viewmodel.TransactionsViewModel
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 private val expenseDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
+private data class SplitDraft(val id: Long, val note: String = "", val amount: String = "", val categoryId: Long? = null)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddExpenseScreen(
-    onSaved: () -> Unit,
-    viewModel: TransactionsViewModel = viewModel()
-) {
-    val categories by viewModel.categories.collectAsStateWithLifecycle()
+fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = viewModel()) {
+    val categories by viewModel.entryCategories.collectAsStateWithLifecycle()
+    val merchantSuggestions by viewModel.merchantSuggestions.collectAsStateWithLifecycle()
+    val dateProvider = remember { ExpenseDateProvider() }
+    val amountFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     var amount by rememberSaveable { mutableStateOf("") }
-    var selectedCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var merchant by rememberSaveable { mutableStateOf("") }
-    var note by rememberSaveable { mutableStateOf("") }
-    var selectedDate by rememberSaveable { mutableStateOf(todayStartMillis()) }
-    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var categoryQuery by rememberSaveable { mutableStateOf("") }
+    var categoryChosenByUser by rememberSaveable { mutableStateOf(false) }
+    var merchantSuggestedCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedDate by rememberSaveable { mutableStateOf(dateProvider.todayStartMillis()) }
+    var splitEnabled by rememberSaveable { mutableStateOf(false) }
+    var splits by remember { mutableStateOf(listOf(SplitDraft(1), SplitDraft(2))) }
+    var nextSplitId by remember { mutableStateOf(3L) }
+    var categoryFocused by remember { mutableStateOf(false) }
+    var merchantFocused by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var showValidation by rememberSaveable { mutableStateOf(false) }
+    var validationMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val parsedAmountMinor = parseEgpToMinor(amount)
-    val amountInvalid = showValidation && (parsedAmountMinor == null || parsedAmountMinor <= 0L)
-    val categoryInvalid = showValidation && selectedCategoryId == null
+    val totalMinor = parseEgpToMinor(amount)
+    val splitInputs = splits.map { SplitExpenseInput(parseEgpToMinor(it.amount), it.categoryId, it.note) }
+    val allocation = validateSplitAllocation(totalMinor ?: 0L, splitInputs)
     val selectedCategory = categories.firstOrNull { it.id == selectedCategoryId }
+    LaunchedEffect(Unit) { amountFocus.requestFocus() }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text(
-            text = "Add Expense",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
-        )
-
+        Text("Add Expense", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         OutlinedTextField(
-            value = amount,
-            onValueChange = { amount = it },
-            label = { Text("Amount (EGP)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            isError = amountInvalid,
-            supportingText = if (amountInvalid) {
-                { Text("Enter an amount greater than zero with up to 2 decimal places") }
-            } else null,
-            modifier = Modifier.fillMaxWidth()
+            value = amount, onValueChange = { amount = it; validationMessage = null },
+            label = { Text("Amount") }, suffix = { Text("EGP") },
+            textStyle = MaterialTheme.typography.headlineMedium,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true,
+            modifier = Modifier.fillMaxWidth().focusRequester(amountFocus)
         )
-
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = selectedCategory?.name.orEmpty(),
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Category") },
-                placeholder = { Text("Select a category") },
-                isError = categoryInvalid,
-                supportingText = if (categoryInvalid) {
-                    { Text("Select a category") }
-                } else null,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable { categoryMenuExpanded = true }
-            )
-            DropdownMenu(
-                expanded = categoryMenuExpanded,
-                onDismissRequest = { categoryMenuExpanded = false },
-                modifier = Modifier.fillMaxWidth(0.9f)
-            ) {
-                categories.forEach { category ->
-                    DropdownMenuItem(
-                        text = { Text(category.name) },
-                        onClick = {
-                            selectedCategoryId = category.id
-                            categoryMenuExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        OutlinedTextField(
-            value = formatDate(selectedDate),
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Date") },
-            modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }
-        )
-        TextButton(onClick = { showDatePicker = true }) { Text("Change date") }
 
         OutlinedTextField(
             value = merchant,
-            onValueChange = { merchant = it },
-            label = { Text("Merchant (optional)") },
+            onValueChange = { merchant = it; viewModel.updateMerchantQuery(it) },
+            label = { Text("Merchant") }, placeholder = { Text("Search merchant") },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { merchantFocused = false; focusManager.clearFocus() }),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().onFocusChanged { merchantFocused = it.isFocused }
         )
-        OutlinedTextField(
-            value = note,
-            onValueChange = { note = it },
-            label = { Text("Note (optional)") },
-            minLines = 3,
-            modifier = Modifier.fillMaxWidth()
+        if (merchantFocused) {
+            InlineSuggestionList(
+                suggestions = merchantSuggestions.take(5).map { suggestion ->
+                    InlineSuggestion(suggestion.merchant.id, suggestion, suggestion.merchant.displayName,
+                        suggestion.merchant.usageCount.takeIf { it > 0 }?.let { "Used $it times" })
+                },
+                onSelected = { suggestion ->
+                    merchant = suggestion.merchant.displayName
+                    merchantSuggestedCategoryId = suggestion.merchant.defaultCategoryId?.takeIf { id -> categories.any { it.id == id } }
+                    if (!categoryChosenByUser) {
+                        selectedCategoryId = merchantSuggestedCategoryId
+                        categoryQuery = categories.firstOrNull { it.id == selectedCategoryId }?.name.orEmpty()
+                    }
+                    viewModel.updateMerchantQuery(merchant)
+                    merchantFocused = false
+                    focusManager.clearFocus()
+                },
+                addLabel = if (shouldOfferNewMerchant(merchant, merchantSuggestions)) "Add “${merchant.trim()}”" else null,
+                onAdd = if (shouldOfferNewMerchant(merchant, merchantSuggestions)) {{
+                    viewModel.createMerchant(merchant) { created ->
+                        created?.let { merchant = it.displayName }
+                        merchantFocused = false
+                        focusManager.clearFocus()
+                    }
+                }} else null
+            )
+        }
+
+        SearchableCategorySelector(
+            categories = categories,
+            query = categoryQuery,
+            selected = selectedCategory,
+            suggestedCategoryId = merchantSuggestedCategoryId,
+            expanded = categoryFocused,
+            onQueryChange = { categoryQuery = it; selectedCategoryId = null },
+            onFocusChange = { categoryFocused = it },
+            onSelected = { category ->
+                selectedCategoryId = category.id
+                categoryQuery = category.name
+                categoryChosenByUser = true
+                categoryFocused = false
+                focusManager.clearFocus()
+            }
         )
+        OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(dateLabel(selectedDate, dateProvider))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Split this purchase", style = MaterialTheme.typography.titleMedium)
+                Text("Assign parts to different categories", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(checked = splitEnabled, onCheckedChange = { splitEnabled = it; validationMessage = null })
+        }
+
+        if (splitEnabled) {
+            splits.forEachIndexed { index, split ->
+                SplitRow(
+                    split, categories, allocation.remainingMinor,
+                    onChange = { updated -> splits = splits.toMutableList().also { it[index] = updated } },
+                    onRemove = { if (splits.size > 1) splits = splits.filterNot { it.id == split.id } }
+                )
+            }
+            TextButton(onClick = { splits = splits + SplitDraft(nextSplitId++) }) { Text("+ Add split") }
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Assigned: ${formatEgp(allocation.assignedMinor)}")
+                    Text(
+                        if (allocation.remainingMinor >= 0) "Remaining: ${formatEgp(allocation.remainingMinor)}"
+                        else "Over allocated: ${formatEgp(-allocation.remainingMinor)}",
+                        color = if (allocation.remainingMinor == 0L) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+
+        validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(
             onClick = {
-                showValidation = true
-                val validAmountMinor = parseEgpToMinor(amount)
-                val categoryId = selectedCategoryId
-                if (validAmountMinor != null && validAmountMinor > 0L && categoryId != null) {
-                    viewModel.addManualExpense(
-                        amountMinor = validAmountMinor,
-                        categoryId = categoryId,
-                        merchant = merchant.trim(),
-                        note = note.trim(),
-                        transactionDate = selectedDate,
-                        onSaved = onSaved
-                    )
+                val parsed = parseEgpToMinor(amount)
+                if (parsed == null || parsed <= 0L) {
+                    validationMessage = "Enter an amount greater than zero with up to 2 decimal places."
+                } else {
+                    viewModel.saveManualPurchase(
+                        parsed, selectedCategoryId, merchant, selectedDate,
+                        splitInputs.takeIf { splitEnabled }, onSaved
+                    ) { validationMessage = it }
                 }
             },
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Save Expense")
-        }
+        ) { Text("Save Expense") }
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { selectedDate = it }
-                    showDatePicker = false
-                }) { Text("OK") }
+        SpendWiseDatePickerDialog(
+            initialDate = Instant.ofEpochMilli(selectedDate).atZone(ZoneOffset.UTC).toLocalDate(),
+            onDateSelected = {
+                selectedDate = it.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+                showDatePicker = false
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
+            onDismiss = { showDatePicker = false },
+            showTodayAction = true
+        )
+    }
+}
+
+@Composable
+private fun SearchableCategorySelector(
+    categories: List<CategoryEntity>, query: String, selected: CategoryEntity?, suggestedCategoryId: Long?, expanded: Boolean,
+    onQueryChange: (String) -> Unit, onFocusChange: (Boolean) -> Unit, onSelected: (CategoryEntity) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = query, onValueChange = onQueryChange,
+            label = { Text("Category") }, placeholder = { Text("Search categories") }, singleLine = true,
+            modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) }
+        )
+        if (expanded) {
+            val ranked = rankCategories(query, categories, suggestedCategoryId)
+            InlineSuggestionList(
+                ranked.map { InlineSuggestion(it.category.id, it.category, it.category.name,
+                    if (it.category.id == suggestedCategoryId) "Suggested for this merchant" else null) },
+                onSelected = onSelected
+            )
         }
     }
 }
 
-private fun todayStartMillis(): Long = LocalDate.now()
-    .atStartOfDay(ZoneOffset.UTC)
-    .toInstant()
-    .toEpochMilli()
+@Composable
+private fun SplitRow(
+    split: SplitDraft, categories: List<CategoryEntity>, remainingMinor: Long,
+    onChange: (SplitDraft) -> Unit, onRemove: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val category = categories.firstOrNull { it.id == split.categoryId }
+    var query by rememberSaveable(split.id) { mutableStateOf(category?.name.orEmpty()) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(
+                value = split.note, onValueChange = { onChange(split.copy(note = it)) },
+                label = { Text("Item or note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+            SearchableCategorySelector(categories, query, category, null, expanded,
+                onQueryChange = { query = it; expanded = true; onChange(split.copy(categoryId = null)) },
+                onFocusChange = { expanded = it },
+                onSelected = { selected -> query = selected.name; expanded = false; onChange(split.copy(categoryId = selected.id)) })
+            OutlinedTextField(
+                value = split.amount, onValueChange = { onChange(split.copy(amount = it)) },
+                label = { Text("Split amount") }, suffix = { Text("EGP") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = onRemove) { Text("Remove") }
+                if (remainingMinor > 0L) {
+                    TextButton(onClick = {
+                        val current = parseEgpToMinor(split.amount) ?: 0L
+                        onChange(split.copy(amount = minorToInput(current + remainingMinor)))
+                    }) { Text("Use remaining") }
+                }
+            }
+        }
+    }
+}
 
-private fun formatDate(value: Long): String = Instant.ofEpochMilli(value)
-    .atZone(ZoneOffset.UTC)
-    .toLocalDate()
-    .format(expenseDateFormatter)
+private fun minorToInput(value: Long): String = if (value % 100L == 0L) (value / 100L).toString()
+else "${value / 100L}.${(value % 100L).toString().padStart(2, '0')}"
+
+private fun dateLabel(value: Long, provider: ExpenseDateProvider): String {
+    val formatted = Instant.ofEpochMilli(value).atZone(ZoneOffset.UTC).toLocalDate().format(expenseDateFormatter)
+    return if (provider.isToday(value)) "Today · $formatted" else formatted
+}

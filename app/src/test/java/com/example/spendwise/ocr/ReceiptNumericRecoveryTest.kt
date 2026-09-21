@@ -125,6 +125,45 @@ class ReceiptNumericRecoveryTest {
         assertEquals(PriceSource.OCR_ORIGINAL, recovered.items.first().priceSource)
     }
 
+    @Test
+    fun targetedOcrCannotDowngradeStrongerArithmeticRecovery() {
+        val parsed = parser.parse(
+            listOf(
+                positioned("Apples", 30f, 100f, 250f),
+                positioned("10.00", 350f, 100f, 420f),
+                positioned("0.500", 500f, 100f, 570f),
+                positioned("5.00", 650f, 100f, 720f),
+                positioned("Guava", 30f, 140f, 250f),
+                positioned("20.00", 350f, 140f, 420f),
+                positioned("0.500", 500f, 140f, 570f),
+                positioned("10.00", 650f, 140f, 720f),
+                positioned("Yellow Apple", 30f, 180f, 250f),
+                positioned("100.00", 350f, 180f, 430f),
+                positioned("0.810", 500f, 180f, 570f),
+                positioned("1.00", 650f, 180f, 720f),
+                positioned("TOTAL", 30f, 240f, 160f),
+                positioned("96.00", 650f, 240f, 720f)
+            )
+        )
+        val recoveredItem = parsed.items.singleOrNull { it.name == "Yellow Apple" }
+            ?: error("Yellow Apple was not parsed: ${parsed.items}")
+        assertEquals(8_100L, recoveredItem.amountMinor)
+        assertEquals(PriceSource.ARITHMETIC_RECOVERY, recoveredItem.priceSource)
+        val target = parsed.recoveryTargets.singleOrNull { parsed.items[it.itemIndex].name == "Yellow Apple" }
+            ?: error("Yellow Apple recovery target was not retained: ${parsed.recoveryTargets}")
+
+        val result = recovery.recover(
+            parsed,
+            listOf(NumericOcrCandidate(target.itemIndex, "1.00", 0.99f, "contrast_4x", requireNotNull(target.priceBoundingBox)))
+        ).receipt
+
+        val finalItem = result.items.single { it.name == "Yellow Apple" }
+        assertEquals(8_100L, finalItem.amountMinor)
+        assertEquals(PriceSource.ARITHMETIC_RECOVERY, finalItem.priceSource)
+        assertTrue(finalItem.requiresReview)
+        assertEquals(ReceiptTotalConsistency.MATCH, result.totalConsistency)
+    }
+
     private fun positioned(
         text: String,
         left: Float,

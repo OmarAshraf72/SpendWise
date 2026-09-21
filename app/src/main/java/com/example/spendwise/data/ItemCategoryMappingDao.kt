@@ -47,6 +47,20 @@ interface ItemCategoryMappingDao {
         normalizedMerchant: String?
     ): ItemCategoryMappingEntity?
 
+    @Query(
+        """
+        SELECT mappings.* FROM item_category_mappings AS mappings
+        INNER JOIN categories ON categories.id = mappings.categoryId
+        WHERE mappings.normalizedMerchant IS NULL
+          AND mappings.categoryId IN (:categoryIds)
+          AND categories.isArchived = 0
+        ORDER BY mappings.categoryId, mappings.updatedAt DESC
+        """
+    )
+    suspend fun getActiveGenericMappingsForCategories(
+        categoryIds: List<Long>
+    ): List<ItemCategoryMappingEntity>
+
     @Upsert
     suspend fun upsert(mapping: ItemCategoryMappingEntity)
 }

@@ -26,7 +26,9 @@ class TransactionRepository(private val dao: TransactionDao) {
                 transactionDate = transactionDate,
                 source = TransactionSource.MANUAL,
                 createdAt = System.currentTimeMillis(),
-                receiptGroupId = null
+                receiptGroupId = null,
+                merchantId = null,
+                purchaseGroupId = null
             )
         )
     }
@@ -47,7 +49,9 @@ class TransactionRepository(private val dao: TransactionDao) {
                 transactionDate = transactionDate,
                 source = TransactionSource.MANUAL,
                 createdAt = System.currentTimeMillis(),
-                receiptGroupId = null
+                receiptGroupId = null,
+                merchantId = null,
+                purchaseGroupId = null
             )
         )
     }
@@ -70,10 +74,38 @@ class TransactionRepository(private val dao: TransactionDao) {
                     transactionDate = transactionDate,
                     source = TransactionSource.RECEIPT,
                     createdAt = createdAt + index,
-                    receiptGroupId = receiptGroupId
+                    receiptGroupId = receiptGroupId,
+                    merchantId = null,
+                    purchaseGroupId = receiptGroupId
                 )
             }
         )
+    }
+
+    suspend fun addManualPurchase(
+        parts: List<ManualExpensePart>,
+        merchantId: Long?,
+        merchantName: String?,
+        transactionDate: Long,
+        purchaseGroupId: String?
+    ) {
+        require(parts.isNotEmpty() && parts.all { it.amountMinor > 0L })
+        val createdAt = System.currentTimeMillis()
+        dao.insertAll(parts.mapIndexed { index, part ->
+            TransactionEntity(
+                type = TransactionType.EXPENSE,
+                amountMinor = part.amountMinor,
+                categoryId = part.categoryId,
+                merchant = merchantName?.takeIf(String::isNotBlank),
+                note = part.note?.takeIf(String::isNotBlank),
+                transactionDate = transactionDate,
+                source = TransactionSource.MANUAL,
+                createdAt = createdAt + index,
+                receiptGroupId = null,
+                merchantId = merchantId,
+                purchaseGroupId = purchaseGroupId
+            )
+        })
     }
 }
 
@@ -82,3 +114,5 @@ data class ReceiptExpenseItem(
     val amountMinor: Long,
     val categoryId: Long
 )
+
+data class ManualExpensePart(val amountMinor: Long, val categoryId: Long, val note: String? = null)

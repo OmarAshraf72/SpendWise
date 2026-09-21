@@ -3,12 +3,30 @@ package com.example.spendwise.suggestion
 import com.example.spendwise.data.CategoryEntity
 import com.example.spendwise.data.ItemCategoryMappingEntity
 
-enum class CategorySuggestionSource { USER_LEARNED, RULE, SEMANTIC_MODEL }
+enum class CategorySuggestionSource { USER_LEARNED, LEXICAL, SEMANTIC_MODEL }
+
+data class CategoryCandidate(
+    val categoryId: Long,
+    val categoryName: String,
+    val score: Double
+)
+
+data class CategorySuggestionDiagnostics(
+    val normalizedItemText: String,
+    val topCandidates: List<CategoryCandidate>,
+    val scoreGap: Double?,
+    val inferenceMillis: Long,
+    val detail: String? = null
+)
 
 data class CategorySuggestion(
     val categoryId: Long,
     val confidence: Double,
-    val source: CategorySuggestionSource
+    val source: CategorySuggestionSource,
+    val top1Score: Double? = null,
+    val top2Score: Double? = null,
+    val scoreGap: Double? = null,
+    val diagnostics: CategorySuggestionDiagnostics? = null
 )
 
 interface CategorySuggestionEngine {

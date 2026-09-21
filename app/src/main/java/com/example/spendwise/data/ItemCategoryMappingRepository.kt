@@ -2,10 +2,11 @@ package com.example.spendwise.data
 
 import com.example.spendwise.suggestion.ItemNameNormalizer
 import com.example.spendwise.suggestion.ItemCategoryMappingStore
+import com.example.spendwise.suggestion.ConfirmedExampleStore
 
 class ItemCategoryMappingRepository(
     private val dao: ItemCategoryMappingDao
-) : ItemCategoryMappingStore {
+) : ItemCategoryMappingStore, ConfirmedExampleStore {
     override suspend fun findMerchantMapping(
         normalizedItemName: String,
         normalizedMerchant: String
@@ -14,6 +15,14 @@ class ItemCategoryMappingRepository(
     override suspend fun findGenericMapping(
         normalizedItemName: String
     ): ItemCategoryMappingEntity? = dao.findActiveGenericMapping(normalizedItemName)
+
+    override suspend fun getConfirmedExamples(
+        categoryIds: List<Long>
+    ): List<ItemCategoryMappingEntity> = if (categoryIds.isEmpty()) {
+        emptyList()
+    } else {
+        dao.getActiveGenericMappingsForCategories(categoryIds)
+    }
 
     suspend fun confirmSelection(
         itemName: String,

@@ -31,16 +31,21 @@ class ReceiptNumericRecovery {
         val majorMismatch = total != null && abs(total - calculated) > max(MIN_MAJOR_MISMATCH_MINOR, total / 20L)
         val sortedAmounts = receipt.items.map(ParsedReceiptItem::amountMinor).sorted()
         val median = sortedAmounts.getOrNull(sortedAmounts.size / 2) ?: 0L
-        return receipt.recoveryTargets.mapNotNull { target ->
+        val selectedItemIndexes = receipt.recoveryTargets.asSequence()
+            .filter { it.role == NumericCellRole.LINE_TOTAL }
+            .mapNotNull { target ->
             val lowConfidence = (target.originalConfidence ?: 0f) < LOW_ORIGINAL_CONFIDENCE
             val suspiciouslySmall = receipt.items.size > 1 && median > 0L && target.originalAmountMinor * 4L < median
-            if (!lowConfidence && !suspiciouslySmall && !majorMismatch) return@mapNotNull null
+            val structurallyRecovered = receipt.items.getOrNull(target.itemIndex)?.requiresReview == true
+            if (!lowConfidence && !suspiciouslySmall && !majorMismatch && !structurallyRecovered) return@mapNotNull null
             val priority = (if (lowConfidence) 2 else 0) + (if (suspiciouslySmall) 2 else 0) +
-                (if (majorMismatch) 1 else 0)
+                (if (majorMismatch) 1 else 0) + (if (structurallyRecovered) 2 else 0)
             target to priority
         }.sortedByDescending { (_, priority) -> priority }
-            .take(MAX_RECOVERY_CROPS)
-            .map { (target, _) -> target }
+            .take(MAX_RECOVERY_ROWS)
+            .map { (target, _) -> target.itemIndex }
+            .toSet()
+        return receipt.recoveryTargets.filter { it.itemIndex in selectedItemIndexes }
     }
 
     fun recover(
@@ -53,10 +58,10 @@ class ReceiptNumericRecovery {
         }.toMutableMap()
         val debug = mutableListOf<NumericRecoveryDebugEntry>()
 
-        receipt.recoveryTargets.forEach { target ->
+        receipt.recoveryTargets.filter { it.role == NumericCellRole.LINE_TOTAL }.forEach { target ->
             val item = updatedItems.getOrNull(target.itemIndex) ?: return@forEach
             val candidateScores = candidates.asSequence()
-                .filter { it.itemIndex == target.itemIndex }
+                .filter { it.itemIndex == target.itemIndex && it.role == NumericCellRole.LINE_TOTAL }
                 .mapNotNull { candidate ->
                     val amount = parseStrictMoney(candidate.text) ?: return@mapNotNull null
                     if (amount !in MIN_PRICE_MINOR..MAX_PRICE_MINOR) return@mapNotNull null
@@ -72,8 +77,11 @@ class ReceiptNumericRecovery {
                 val agreeingVariants = candidateScores.count { it.amountMinor == scored.amountMinor }
                 val independentEvidence = scored.candidate.confidence >= STRONG_RECOVERY_CONFIDENCE ||
                     agreeingVariants >= 2 || (target.originalConfidence ?: 0f) < LOW_ORIGINAL_CONFIDENCE
+                val preservesStrongerArithmeticEvidence = item.priceSource != PriceSource.ARITHMETIC_RECOVERY ||
+                    scored.amountMinor == item.amountMinor || improvesCurrentTotalConsistency(receipt, item, scored.amountMinor)
                 scored.score >= MIN_RECOVERY_SCORE &&
-                    scored.candidate.confidence >= MIN_RECOVERY_CONFIDENCE && independentEvidence
+                    scored.candidate.confidence >= MIN_RECOVERY_CONFIDENCE && independentEvidence &&
+                    preservesStrongerArithmeticEvidence
             }
 
             if (selected != null && selected.amountMinor != item.amountMinor) {
@@ -164,7 +172,7 @@ class ReceiptNumericRecovery {
             else -> 0.04
         }
         val agreementCount = allCandidates.count { other ->
-            other.itemIndex == candidate.itemIndex && parseStrictMoney(other.text) == amountMinor
+            other.itemIndex == candidate.itemIndex && other.role == candidate.role && parseStrictMoney(other.text) == amountMinor
         }
         val agreementScore = ((agreementCount - 1).coerceIn(0, 2)) * 0.05
         val totalScore = receipt.detectedTotalMinor?.let { total ->
@@ -175,7 +183,69 @@ class ReceiptNumericRecovery {
                 0.1 * (1.0 - recoveredDifference.toDouble() / originalDifference.coerceAtLeast(1L))
             } else 0.0
         } ?: 0.0
-        return confidenceScore + syntaxScore + columnScore + rangeScore + agreementScore + totalScore
+        val arithmeticScore = arithmeticAgreementScore(candidate, amountMinor, allCandidates)
+        return confidenceScore + syntaxScore + columnScore + rangeScore + agreementScore + totalScore + arithmeticScore
+    }
+
+    private fun arithmeticAgreementScore(
+        lineTotal: NumericOcrCandidate,
+        amountMinor: Long,
+        allCandidates: List<NumericOcrCandidate>
+    ): Double {
+        val unit = bestDecimalCandidate(allCandidates, lineTotal.itemIndex, NumericCellRole.UNIT_PRICE, 2) ?: return 0.0
+        val weight = bestDecimalCandidate(allCandidates, lineTotal.itemIndex, NumericCellRole.WEIGHT, 3) ?: return 0.0
+        val expectedMinor = unit.first.multiply(weight.first).setScale(2, RoundingMode.HALF_UP)
+            .movePointRight(2).longValueExact()
+        val difference = abs(expectedMinor - amountMinor)
+        return when {
+            difference <= ARITHMETIC_TOLERANCE_MINOR -> 0.16
+            difference <= 10L -> 0.05
+            else -> 0.0
+        }
+    }
+
+    private fun bestDecimalCandidate(
+        candidates: List<NumericOcrCandidate>,
+        itemIndex: Int,
+        role: NumericCellRole,
+        maxScale: Int
+    ): Pair<BigDecimal, Float>? = candidates.asSequence()
+        .filter { it.itemIndex == itemIndex && it.role == role }
+        .mapNotNull { candidate ->
+            parseStrictDecimal(candidate.text, maxScale)
+                ?.takeIf { decimal -> fitsColumnFormat(decimal, role) }
+                ?.let { it to candidate.confidence }
+        }
+        .groupBy { it.first }
+        .map { (value, matches) -> value to (matches.maxOf { it.second } + matches.size.coerceAtMost(3) * 0.03f) }
+        .maxByOrNull { it.second }
+
+    private fun fitsColumnFormat(value: BigDecimal, role: NumericCellRole): Boolean = when (role) {
+        NumericCellRole.UNIT_PRICE -> value > BigDecimal.ZERO && value.scale() <= 2
+        NumericCellRole.WEIGHT -> value > BigDecimal.ZERO && value <= MAX_REASONABLE_WEIGHT && value.scale() == 3
+        NumericCellRole.LINE_TOTAL -> value > BigDecimal.ZERO && value.scale() <= 2
+    }
+
+    private fun parseStrictDecimal(value: String, maxScale: Int): BigDecimal? {
+        val normalized = repairNumericOcr(normalizeDigits(value)).trim().replace(CURRENCY_REGEX, "").replace(" ", "")
+        if (!Regex("^(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:[.,]\\d{1,$maxScale})?$").matches(normalized)) return null
+        val canonical = when {
+            normalized.contains(',') && normalized.contains('.') -> normalized.replace(",", "")
+            normalized.count { it == ',' } == 1 && normalized.substringAfter(',').length <= maxScale -> normalized.replace(',', '.')
+            else -> normalized.replace(",", "")
+        }
+        return canonical.toBigDecimalOrNull()
+    }
+
+    private fun improvesCurrentTotalConsistency(
+        receipt: ParsedReceipt,
+        currentItem: ParsedReceiptItem,
+        candidateAmountMinor: Long
+    ): Boolean {
+        val total = receipt.detectedTotalMinor ?: return false
+        val currentSum = receipt.items.sumOf(ParsedReceiptItem::amountMinor)
+        val candidateSum = currentSum - currentItem.amountMinor + candidateAmountMinor
+        return abs(total - candidateSum) < abs(total - currentSum)
     }
 
     private fun columnAlignmentScore(target: PriceRecoveryTarget, candidateBox: OcrBoundingBox): Double {
@@ -186,7 +256,7 @@ class ReceiptNumericRecovery {
     }
 
     private fun parseStrictMoney(value: String): Long? {
-        val normalized = normalizeDigits(value).trim()
+        val normalized = repairNumericOcr(normalizeDigits(value)).trim()
             .replace(CURRENCY_REGEX, "")
             .replace(" ", "")
         if (!MONEY_REGEX.matches(normalized)) return null
@@ -198,6 +268,20 @@ class ReceiptNumericRecovery {
         return runCatching {
             BigDecimal(canonical).setScale(2, RoundingMode.UNNECESSARY).movePointRight(2).longValueExact()
         }.getOrNull()
+    }
+
+    private fun repairNumericOcr(value: String): String {
+        val withoutCurrency = value.replace(CURRENCY_REGEX, "").trim()
+        if (!withoutCurrency.any(Char::isDigit) || !NUMERIC_CROP_TEXT_REGEX.matches(withoutCurrency)) return value
+        return withoutCurrency.map { character ->
+            when (character) {
+                'O', 'o' -> '0'
+                'I', 'l', '|' -> '1'
+                'B' -> '8'
+                'S', 's' -> '5'
+                else -> character
+            }
+        }.joinToString("")
     }
 
     private fun normalizeDigits(value: String): String = buildString(value.length) {
@@ -230,9 +314,12 @@ class ReceiptNumericRecovery {
         const val MIN_MAJOR_MISMATCH_MINOR = 100L
         const val MIN_PRICE_MINOR = 1L
         const val MAX_PRICE_MINOR = 100_000_000L
-        const val MAX_RECOVERY_CROPS = 6
+        const val MAX_RECOVERY_ROWS = 6
+        const val ARITHMETIC_TOLERANCE_MINOR = 2L
+        val MAX_REASONABLE_WEIGHT: BigDecimal = BigDecimal("1000.000")
         const val TOTAL_TOLERANCE_MINOR = 2L
         val MONEY_REGEX = Regex("^(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:[.,]\\d{1,2})?$")
+        val NUMERIC_CROP_TEXT_REGEX = Regex("[0-9OoIl|BSs., ]{1,24}")
         val CURRENCY_REGEX = Regex("(?i)(?:EGP|L\\.?E\\.?|ج(?:نيه)?|جم)")
     }
 }

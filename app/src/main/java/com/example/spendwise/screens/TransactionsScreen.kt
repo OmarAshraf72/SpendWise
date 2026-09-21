@@ -40,6 +40,10 @@ import java.time.format.DateTimeFormatter
 
 private val transactionDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 private enum class TransactionFilter(val label: String) { ALL("All"), EXPENSES("Expenses"), INCOME("Income") }
+private data class TransactionDisplay(val rows: List<TransactionWithCategory>) {
+    val first get() = rows.first()
+    val key get() = first.transaction.purchaseGroupId ?: "transaction-${first.transaction.id}"
+}
 
 @Composable
 fun TransactionsScreen(
@@ -55,6 +59,7 @@ fun TransactionsScreen(
             TransactionFilter.INCOME -> item.transaction.type == TransactionType.INCOME
         }
     }
+    val displayTransactions = groupForDisplay(filteredTransactions)
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -81,10 +86,10 @@ fun TransactionsScreen(
                     }
                 }
             }
-            if (filteredTransactions.isEmpty()) {
+            if (displayTransactions.isEmpty()) {
                 item { EmptyTransactions(filter) }
             } else {
-                items(filteredTransactions, key = { it.transaction.id }) { item ->
+                items(displayTransactions, key = TransactionDisplay::key) { item ->
                     TransactionRow(item)
                 }
             }
@@ -128,10 +133,16 @@ private fun EmptyTransactions(filter: TransactionFilter) {
 }
 
 @Composable
-private fun TransactionRow(item: TransactionWithCategory) {
-    val transaction = item.transaction
+private fun TransactionRow(item: TransactionDisplay) {
+    val transaction = item.first.transaction
     val isIncome = transaction.type == TransactionType.INCOME
-    val title = if (isIncome) transaction.merchant ?: "Income" else item.category?.name ?: "Uncategorized"
+    val isSplit = !isIncome && item.rows.size > 1 && transaction.purchaseGroupId != null
+    val title = when {
+        isIncome -> transaction.merchant ?: "Income"
+        isSplit -> transaction.merchant ?: "Split purchase"
+        else -> item.first.category?.name ?: "Uncategorized"
+    }
+    val totalMinor = item.rows.sumOf { it.transaction.amountMinor }
     val date = Instant.ofEpochMilli(transaction.transactionDate)
         .atZone(ZoneOffset.UTC)
         .toLocalDate()
@@ -155,14 +166,27 @@ private fun TransactionRow(item: TransactionWithCategory) {
                     )
                 }
                 Text(
-                    text = (if (isIncome) "+" else "-") + formatEgp(transaction.amountMinor),
+                    text = (if (isIncome) "+" else "-") + formatEgp(totalMinor),
                     style = MaterialTheme.typography.titleMedium,
                     color = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             if (!isIncome) {
-                transaction.merchant?.let { Text(text = it, style = MaterialTheme.typography.bodyMedium) }
+                if (isSplit) {
+                    Text("${item.rows.size} splits", style = MaterialTheme.typography.labelMedium)
+                    item.rows.forEach { split ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(split.category?.name ?: "Uncategorized", style = MaterialTheme.typography.bodyMedium)
+                            Text(formatEgp(split.transaction.amountMinor), style = MaterialTheme.typography.bodyMedium)
+                        }
+                        split.transaction.note?.let { note ->
+                            Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else {
+                    transaction.merchant?.let { Text(text = it, style = MaterialTheme.typography.bodyMedium) }
+                }
             }
             Text(
                 text = date,
@@ -170,5 +194,15 @@ private fun TransactionRow(item: TransactionWithCategory) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+private fun groupForDisplay(transactions: List<TransactionWithCategory>): List<TransactionDisplay> {
+    val grouped = transactions.filter { it.transaction.purchaseGroupId != null }
+        .groupBy { checkNotNull(it.transaction.purchaseGroupId) }
+    val emitted = mutableSetOf<String>()
+    return transactions.mapNotNull { row ->
+        val groupId = row.transaction.purchaseGroupId ?: return@mapNotNull TransactionDisplay(listOf(row))
+        if (!emitted.add(groupId)) null else TransactionDisplay(checkNotNull(grouped[groupId]))
     }
 }

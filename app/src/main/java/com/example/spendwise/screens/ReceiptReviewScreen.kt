@@ -97,17 +97,18 @@ fun ReceiptReviewScreen(
                 )
             }
         }
-        if (isDebugBuild && draft.ocrDebugDetails != null) {
+        if (isDebugBuild && (draft.ocrDebugDetails != null || draft.categoryDebugDetails != null)) {
             OutlinedButton(
                 onClick = { showOcrDebug = !showOcrDebug },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (showOcrDebug) "Hide OCR debug details" else "Show OCR debug details")
+                Text(if (showOcrDebug) "Hide debug details" else "Show debug details")
             }
             if (showOcrDebug) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = draft.ocrDebugDetails.orEmpty(),
+                        text = listOfNotNull(draft.ocrDebugDetails, draft.categoryDebugDetails)
+                            .joinToString("\n\n"),
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace
@@ -265,9 +266,15 @@ private fun ReceiptItemRow(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(categoryName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (item.categorySuggestion?.source == CategorySuggestionSource.USER_LEARNED) {
+                val suggestionLabel = when (item.categorySuggestion?.source) {
+                    CategorySuggestionSource.USER_LEARNED -> "Suggested from previous choices"
+                    CategorySuggestionSource.LEXICAL,
+                    CategorySuggestionSource.SEMANTIC_MODEL -> "Suggested"
+                    null -> null
+                }
+                if (suggestionLabel != null) {
                     Text(
-                        "Suggested from previous choices",
+                        suggestionLabel,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )

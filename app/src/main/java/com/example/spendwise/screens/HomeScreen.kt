@@ -13,9 +13,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -27,15 +30,19 @@ import com.example.spendwise.data.formatEgp
 import com.example.spendwise.viewmodel.CategorySpendingUi
 import com.example.spendwise.viewmodel.HomeUiState
 import com.example.spendwise.viewmodel.HomeViewModel
+import com.example.spendwise.viewmodel.CommitmentsViewModel
 
 @Composable
 fun HomeScreen(
     onAddExpense: () -> Unit,
     onAddIncome: () -> Unit,
-    onScanReceipt: () -> Unit,
-    viewModel: HomeViewModel = viewModel()
+    onCommitments: () -> Unit,
+    onSettings: () -> Unit,
+    viewModel: HomeViewModel = viewModel(),
+    commitmentsViewModel: CommitmentsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val commitments by commitmentsViewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -44,23 +51,51 @@ fun HomeScreen(
             .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = "SpendWise",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = uiState.monthLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "SpendWise",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = uiState.monthLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onSettings) {
+                Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+            }
         }
 
         SummaryCard(uiState)
+        UpcomingCommitmentsCard(commitments, onCommitments)
         SpendingBreakdown(uiState.categorySpending)
         InsightCard(uiState.insight)
-        QuickActions(onAddExpense, onAddIncome, onScanReceipt)
+        QuickActions(onAddExpense, onAddIncome)
+    }
+}
+
+@Composable
+private fun UpcomingCommitmentsCard(
+    state: com.example.spendwise.viewmodel.CommitmentsUiState,
+    onCommitments: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Upcoming commitments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            val next = state.summary.nextOccurrence
+            if (next == null) {
+                Text("No upcoming commitments yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onCommitments) { Text("Add commitment") }
+            } else {
+                SummaryLine("Next 30 days", formatEgp(state.summary.next30DaysMinor))
+                Text(next.commitment.commitment.title, fontWeight = FontWeight.SemiBold)
+                Text("${formatEgp(next.amountMinor)} · ${next.dueDate.format(java.time.format.DateTimeFormatter.ofPattern("d MMM"))}")
+                TextButton(onClick = onCommitments) { Text("View commitments") }
+            }
+        }
     }
 }
 
@@ -204,8 +239,7 @@ private fun InsightCard(insight: String) {
 @Composable
 private fun QuickActions(
     onAddExpense: () -> Unit,
-    onAddIncome: () -> Unit,
-    onScanReceipt: () -> Unit
+    onAddIncome: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -215,9 +249,6 @@ private fun QuickActions(
         )
         Button(onClick = onAddExpense, modifier = Modifier.fillMaxWidth()) {
             Text("Add Expense")
-        }
-        OutlinedButton(onClick = onScanReceipt, modifier = Modifier.fillMaxWidth()) {
-            Text("Scan Receipt")
         }
         TextButton(onClick = onAddIncome, modifier = Modifier.fillMaxWidth()) {
             Text("Add Income")

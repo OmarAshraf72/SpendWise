@@ -1,0 +1,26 @@
+{
+  "model": "alphaedge-ai/multilingual-e5-small-arb-32768",
+  "quantization": "dynamic QInt8 per-channel",
+  "minimum_score_gap": 0.01,
+  "target_count": 9,
+  "case_count": 63,
+  "non_single_case_count": 54,
+  "minimum_embedding_cosine_vs_single": 0.9945775270462036,
+  "maximum_top1_score_drift": 0.01025688648223877,
+  "maximum_top2_score_drift": 0.009515345096588135,
+  "maximum_score_gap_drift": 0.00565791130065918,
+  "top1_change_cases": 2,
+  "top2_change_cases": 7,
+  "threshold_change_cases": 1,
+  "targets_with_top1_change": [
+    "Clean Code"
+  ],
+  "targets_with_top2_change": [
+    "Atomic Habits",
+    "Clean Code",
+    "طماطم"
+  ],
+  "targets_with_threshold_change": [
+    "Chicken Breast"
+  ]
+}
