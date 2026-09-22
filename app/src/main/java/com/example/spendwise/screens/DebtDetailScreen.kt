@@ -108,7 +108,7 @@ fun DebtDetailScreen(onBack: () -> Unit, viewModel: DebtDetailViewModel = viewMo
             Text("Started: ${LocalDate.ofEpochDay(profile.startDateEpochDay).format(debtDateFormatter)}")
             Text("Style: ${profile.repaymentMode.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)}")
             profile.expectedEndDateEpochDay?.let { Text("Expected finish: ${LocalDate.ofEpochDay(it).format(debtDateFormatter)}") }
-            state.nextOccurrence?.let {
+            state.nextOccurrence.takeIf { profile.repaymentMode == RepaymentMode.FIXED_INSTALLMENTS }?.let {
                 Text("Next payment: ${formatEgp((it.amountMinor - state.nextOccurrencePaidMinor).coerceAtLeast(0))} · ${it.dueDate.format(debtDateFormatter)}")
                 if (state.nextOccurrencePaidMinor in 1 until it.amountMinor) Text("Partially paid", color = MaterialTheme.colorScheme.primary)
             }

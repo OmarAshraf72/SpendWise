@@ -10,4 +10,4 @@ enum class MainDestination(val route: String, val title: String, val symbol: Str
 
 fun isMainDestinationSelected(destination: MainDestination, currentRoute: String?): Boolean =
     currentRoute == destination.route ||
-        (destination == MainDestination.More && currentRoute == "categories")
+        (destination == MainDestination.More && (currentRoute == "categories" || currentRoute == "assets"))

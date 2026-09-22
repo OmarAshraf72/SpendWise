@@ -34,6 +34,8 @@ import com.example.spendwise.data.CommitmentFrequency
 import com.example.spendwise.data.CommitmentMonthTotal
 import com.example.spendwise.data.CommitmentOccurrence
 import com.example.spendwise.data.CommitmentOccurrenceStatus
+import com.example.spendwise.data.CommitmentOccurrenceProgress
+import com.example.spendwise.data.DebtOccurrencePaymentState
 import com.example.spendwise.data.CommitmentType
 import com.example.spendwise.data.CommitmentViewMode
 import com.example.spendwise.data.formatEgp
@@ -41,6 +43,7 @@ import com.example.spendwise.viewmodel.CommitmentsUiState
 import com.example.spendwise.viewmodel.CommitmentsViewModel
 import com.example.spendwise.viewmodel.CommitmentGroupFilter
 import com.example.spendwise.viewmodel.DebtSummaryUi
+import com.example.spendwise.viewmodel.occurrenceProgressKey
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -95,18 +98,18 @@ fun CommitmentsScreen(
                 }
             }
             if (overdueExpanded) items(state.overdue, key = { "overdue-${it.commitment.commitment.id}-${it.dueDate}" }) {
-                CommitmentCard(it, true, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail)
+                CommitmentCard(it, true, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail, state.occurrenceProgress[occurrenceProgressKey(it)])
             }
         }
 
         when (state.viewMode) {
             CommitmentViewMode.MONTH -> {
                 item { SectionTitle("Due this month") }
-                occurrenceItems(state.displayedOccurrences, "month", onAddCommitment, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment, onDebtDetail)
+                occurrenceItems(state.displayedOccurrences, "month", onAddCommitment, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment, onDebtDetail, state.occurrenceProgress)
             }
             CommitmentViewMode.NEXT_30_DAYS -> {
                 item { SectionTitle("Due in the next 30 days") }
-                occurrenceItems(state.displayedOccurrences, "30days", onAddCommitment, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment, onDebtDetail)
+                occurrenceItems(state.displayedOccurrences, "30days", onAddCommitment, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment, onDebtDetail, state.occurrenceProgress)
             }
             CommitmentViewMode.ALL_UPCOMING -> {
                 item { SectionTitle("All upcoming") }
@@ -114,7 +117,7 @@ fun CommitmentsScreen(
                 else state.upcomingByMonth.forEach { (month, occurrences) ->
                     item("heading-$month") { Text(month.format(commitmentMonthFormatter), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                     items(occurrences, key = { "all-${it.commitment.commitment.id}-${it.dueDate}" }) {
-                        CommitmentCard(it, false, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail)
+                        CommitmentCard(it, false, onEditCommitment, viewModel::setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail, state.occurrenceProgress[occurrenceProgressKey(it)])
                     }
                 }
             }
@@ -135,11 +138,12 @@ fun CommitmentsScreen(
 private fun LazyListScope.occurrenceItems(
     occurrences: List<CommitmentOccurrence>, keyPrefix: String, onAdd: () -> Unit, onEdit: (Long) -> Unit,
     setStatus: (CommitmentOccurrence, CommitmentOccurrenceStatus, Boolean) -> Unit,
-    debtProfilesByCommitment: Map<Long, Long>, onDebtDetail: (Long) -> Unit
+    debtProfilesByCommitment: Map<Long, Long>, onDebtDetail: (Long) -> Unit,
+    progressByKey: Map<String, CommitmentOccurrenceProgress>
 ) {
     if (occurrences.isEmpty()) item { EmptyCommitments(onAdd) }
     else items(occurrences, key = { "$keyPrefix-${it.commitment.commitment.id}-${it.dueDate}" }) {
-        CommitmentCard(it, false, onEdit, setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail)
+        CommitmentCard(it, false, onEdit, setStatus, debtProfilesByCommitment[it.commitment.commitment.id], onDebtDetail, progressByKey[occurrenceProgressKey(it)])
     }
 }
 
@@ -191,13 +195,17 @@ private fun DebtPortfolioCard(state: CommitmentsUiState) {
 private fun ActiveDebtCard(debt: DebtSummaryUi, onClick: () -> Unit) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(debt.commitment.commitment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(formatEgp(debt.balance.outstandingPrincipalMinor), fontWeight = FontWeight.SemiBold)
-            }
+            Text(debt.commitment.commitment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AmountLine("Remaining debt", debt.balance.outstandingPrincipalMinor, true)
             debt.profile.creditorName?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text(if (debt.profile.repaymentMode == com.example.spendwise.data.RepaymentMode.OPEN_ENDED) "Open-ended debt" else "Fixed installments")
-            debt.nextOccurrence?.let { Text("Next: ${formatEgp(it.amountMinor)} · ${it.dueDate.format(commitmentDayFormatter)}") }
+            debt.nextOccurrence.takeIf { debt.profile.repaymentMode == com.example.spendwise.data.RepaymentMode.FIXED_INSTALLMENTS }?.let {
+                val remaining = (it.amountMinor - debt.nextOccurrencePaidMinor).coerceAtLeast(0)
+                Text("Next due: ${formatEgp(remaining)} remaining · ${it.dueDate.format(commitmentDayFormatter)}")
+                if (debt.nextOccurrencePaidMinor > 0) {
+                    Text("${formatEgp(debt.nextOccurrencePaidMinor.coerceAtMost(it.amountMinor))} of ${formatEgp(it.amountMinor)} paid", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }
@@ -238,7 +246,8 @@ private fun CommitmentCard(
     occurrence: CommitmentOccurrence, overdue: Boolean, onEdit: (Long) -> Unit,
     setStatus: (CommitmentOccurrence, CommitmentOccurrenceStatus, Boolean) -> Unit,
     debtProfileId: Long? = null,
-    onDebtDetail: (Long) -> Unit = {}
+    onDebtDetail: (Long) -> Unit = {},
+    progress: CommitmentOccurrenceProgress? = null
 ) {
     val definition = occurrence.commitment.commitment
     Card(Modifier.fillMaxWidth()) {
@@ -249,8 +258,16 @@ private fun CommitmentCard(
             }
             Text("${occurrence.dueDate.format(commitmentDayFormatter)} · ${definition.frequency.displayName()}", color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             Text(definition.type.displayName(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (debtProfileId != null && progress != null && progress.paidTowardScheduleMinor > 0) {
+                AmountLine("Scheduled", occurrence.amountMinor)
+                AmountLine("Paid", progress.paidTowardScheduleMinor)
+                AmountLine("Remaining", progress.remainingDueMinor, true)
+            }
             val statusLabel = when {
+                overdue && progress?.state == DebtOccurrencePaymentState.PARTIALLY_PAID -> "Overdue · Partially paid"
                 overdue -> "Overdue"
+                progress?.state == DebtOccurrencePaymentState.PARTIALLY_PAID -> "Partially paid"
+                progress?.state == DebtOccurrencePaymentState.PAID -> "Paid"
                 occurrence.status == CommitmentOccurrenceStatus.PAID -> "Paid"
                 occurrence.status == CommitmentOccurrenceStatus.SKIPPED -> "Skipped"
                 else -> null

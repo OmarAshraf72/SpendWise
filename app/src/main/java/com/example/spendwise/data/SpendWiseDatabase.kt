@@ -17,13 +17,16 @@ import kotlinx.coroutines.launch
         CategoryEntity::class, TransactionEntity::class, ItemCategoryMappingEntity::class, MerchantEntity::class,
         FinancialCommitmentEntity::class, CommitmentOccurrenceOverrideEntity::class,
         DebtProfileEntity::class, DebtPaymentEntity::class, FinancingTermsEntity::class, LatePaymentRuleEntity::class
+        , AssetEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
+        AssetMaintenanceRuleEntity::class, AssetMaintenanceEventEntity::class, AssetDocumentEntity::class,
+        AssetCommitmentLinkEntity::class, AssetTransactionLinkEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(
     CategoryTypeConverter::class, TransactionConverters::class, MerchantSourceConverter::class,
-    CommitmentConverters::class, DebtConverters::class
+    CommitmentConverters::class, DebtConverters::class, AssetConverters::class
 )
 abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
@@ -32,6 +35,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun merchantDao(): MerchantDao
     abstract fun commitmentDao(): CommitmentDao
     abstract fun debtDao(): DebtDao
+    abstract fun assetDao(): AssetDao
 
     companion object {
         @Volatile private var instance: SpendWiseDatabase? = null
@@ -44,7 +48,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 "spendwise.db"
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8
+                MIGRATION_7_8, MIGRATION_8_9
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -395,6 +399,74 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                     """.trimIndent()
                 )
                 db.execSQL("CREATE UNIQUE INDEX index_late_payment_rules_debtProfileId ON late_payment_rules (debtProfileId)")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS assets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL,
+                    brand TEXT, model TEXT, purchaseDateEpochDay INTEGER, purchasePriceMinor INTEGER,
+                    sellerMerchantId INTEGER, currentMileageKm INTEGER, notes TEXT, isArchived INTEGER NOT NULL,
+                    createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    FOREIGN KEY(sellerMerchantId) REFERENCES merchants(id) ON UPDATE NO ACTION ON DELETE NO ACTION)""".trimIndent())
+                db.execSQL("CREATE INDEX index_assets_sellerMerchantId ON assets (sellerMerchantId)")
+                db.execSQL("CREATE INDEX index_assets_type ON assets (type)")
+                db.execSQL("CREATE INDEX index_assets_isArchived ON assets (isArchived)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_identifiers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL, type TEXT NOT NULL,
+                    label TEXT, value TEXT NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_identifiers_assetId ON asset_identifiers (assetId)")
+                db.execSQL("CREATE UNIQUE INDEX index_asset_identifiers_assetId_type_value ON asset_identifiers (assetId, type, value)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_warranties (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL, name TEXT NOT NULL,
+                    type TEXT NOT NULL, providerName TEXT, startDateEpochDay INTEGER NOT NULL, endDateEpochDay INTEGER NOT NULL,
+                    phone TEXT, website TEXT, notes TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_warranties_assetId ON asset_warranties (assetId)")
+                db.execSQL("CREATE INDEX index_asset_warranties_endDateEpochDay ON asset_warranties (endDateEpochDay)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_maintenance_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL, title TEXT NOT NULL,
+                    triggerType TEXT NOT NULL, intervalMonths INTEGER, intervalKm INTEGER, baselineDateEpochDay INTEGER,
+                    baselineMileageKm INTEGER, warningDays INTEGER NOT NULL, warningKm INTEGER NOT NULL,
+                    isActive INTEGER NOT NULL, notes TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_maintenance_rules_assetId ON asset_maintenance_rules (assetId)")
+                db.execSQL("CREATE INDEX index_asset_maintenance_rules_isActive ON asset_maintenance_rules (isActive)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_maintenance_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL, maintenanceRuleId INTEGER,
+                    title TEXT NOT NULL, performedDateEpochDay INTEGER NOT NULL, mileageKm INTEGER, costMinor INTEGER,
+                    serviceMerchantId INTEGER, linkedTransactionId INTEGER, notes TEXT, idempotencyKey TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(maintenanceRuleId) REFERENCES asset_maintenance_rules(id) ON UPDATE NO ACTION ON DELETE NO ACTION,
+                    FOREIGN KEY(serviceMerchantId) REFERENCES merchants(id) ON UPDATE NO ACTION ON DELETE NO ACTION,
+                    FOREIGN KEY(linkedTransactionId) REFERENCES transactions(id) ON UPDATE NO ACTION ON DELETE NO ACTION)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_maintenance_events_assetId ON asset_maintenance_events (assetId)")
+                db.execSQL("CREATE INDEX index_asset_maintenance_events_maintenanceRuleId ON asset_maintenance_events (maintenanceRuleId)")
+                db.execSQL("CREATE INDEX index_asset_maintenance_events_serviceMerchantId ON asset_maintenance_events (serviceMerchantId)")
+                db.execSQL("CREATE INDEX index_asset_maintenance_events_linkedTransactionId ON asset_maintenance_events (linkedTransactionId)")
+                db.execSQL("CREATE UNIQUE INDEX index_asset_maintenance_events_idempotencyKey ON asset_maintenance_events (idempotencyKey)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL, documentType TEXT NOT NULL,
+                    title TEXT NOT NULL, storedRelativePath TEXT NOT NULL, mimeType TEXT NOT NULL,
+                    originalFileName TEXT NOT NULL, fileSizeBytes INTEGER NOT NULL, createdAt INTEGER NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_documents_assetId ON asset_documents (assetId)")
+                db.execSQL("CREATE INDEX index_asset_documents_documentType ON asset_documents (documentType)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_commitment_links (
+                    assetId INTEGER NOT NULL, commitmentId INTEGER NOT NULL, relationType TEXT NOT NULL,
+                    PRIMARY KEY(assetId, commitmentId, relationType),
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(commitmentId) REFERENCES financial_commitments(id) ON UPDATE NO ACTION ON DELETE NO ACTION)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_commitment_links_commitmentId ON asset_commitment_links (commitmentId)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_transaction_links (
+                    assetId INTEGER NOT NULL, transactionId INTEGER NOT NULL, relationType TEXT NOT NULL,
+                    PRIMARY KEY(assetId, transactionId, relationType),
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(transactionId) REFERENCES transactions(id) ON UPDATE NO ACTION ON DELETE NO ACTION)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_transaction_links_transactionId ON asset_transaction_links (transactionId)")
             }
         }
     }

@@ -44,12 +44,17 @@ fun SettingsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun MoreScreen(onCategories: () -> Unit) {
+fun MoreScreen(onAssets: () -> Unit, onCategories: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("More", style = MaterialTheme.typography.headlineMedium)
+        Card(Modifier.fillMaxWidth()) {
+            TextButton(onClick = onAssets, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                Text("My Assets")
+            }
+        }
         Card(Modifier.fillMaxWidth()) {
             TextButton(onClick = onCategories, modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                 Text("Categories")

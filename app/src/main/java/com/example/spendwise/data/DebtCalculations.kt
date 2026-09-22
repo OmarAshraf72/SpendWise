@@ -14,6 +14,17 @@ data class DebtBalance(
 
 enum class DebtOccurrencePaymentState { UNPAID, PARTIALLY_PAID, PAID, SKIPPED }
 
+data class CommitmentOccurrenceProgress(
+    val occurrence: CommitmentOccurrence,
+    val paidTowardScheduleMinor: Long,
+    val remainingDueMinor: Long,
+    val state: DebtOccurrencePaymentState
+)
+
+enum class OneTimeAmountSource { PRINCIPAL, FIXED_TOTAL_REPAYABLE, EXPLICIT_AMOUNT_DUE }
+
+data class OneTimeDebtAmount(val amountMinor: Long, val source: OneTimeAmountSource)
+
 object DebtCalculator {
     fun shouldGenerateOccurrences(profile: DebtProfileEntity?): Boolean =
         profile?.repaymentMode != RepaymentMode.OPEN_ENDED
@@ -33,6 +44,45 @@ object DebtCalculator {
         paidMinor <= 0 -> DebtOccurrencePaymentState.UNPAID
         paidMinor < scheduledMinor -> DebtOccurrencePaymentState.PARTIALLY_PAID
         else -> DebtOccurrencePaymentState.PAID
+    }
+
+    /**
+     * Resolves the contractual amount due for a one-time fixed debt. A late charge is
+     * deliberately absent: it is only recorded after lateness and never changes the
+     * initial schedule.
+     */
+    fun oneTimeAmount(
+        originalPrincipalMinor: Long,
+        financingTerms: FinancingTermsEntity?,
+        explicitAmountDueMinor: Long?
+    ): OneTimeDebtAmount? = when (financingTerms?.financingType) {
+        null -> originalPrincipalMinor.takeIf { it > 0 }?.let { OneTimeDebtAmount(it, OneTimeAmountSource.PRINCIPAL) }
+        FinancingType.FIXED_TOTAL -> financingTerms.totalRepayableMinor?.takeIf { it > 0 }
+            ?.let { OneTimeDebtAmount(it, OneTimeAmountSource.FIXED_TOTAL_REPAYABLE) }
+        FinancingType.USER_PROVIDED_RATE, FinancingType.UNKNOWN_DETAILS -> explicitAmountDueMinor?.takeIf { it > 0 }
+            ?.let { OneTimeDebtAmount(it, OneTimeAmountSource.EXPLICIT_AMOUNT_DUE) }
+    }
+
+    fun occurrenceProgress(
+        occurrence: CommitmentOccurrence,
+        debtProfile: DebtProfileEntity?,
+        payments: List<DebtPaymentEntity>
+    ): CommitmentOccurrenceProgress {
+        val skipped = occurrence.status == CommitmentOccurrenceStatus.SKIPPED
+        val allocated = when {
+            skipped -> 0L
+            debtProfile != null -> payments.asSequence()
+                .filter { it.debtProfileId == debtProfile.id && it.occurrenceDueDateEpochDay == occurrence.dueDate.toEpochDay() }
+                .sumOf { it.principalPaidMinor + it.financingCostPaidMinor }
+            occurrence.status == CommitmentOccurrenceStatus.PAID -> occurrence.amountMinor
+            else -> 0L
+        }.coerceAtLeast(0L).coerceAtMost(occurrence.amountMinor)
+        return CommitmentOccurrenceProgress(
+            occurrence = occurrence,
+            paidTowardScheduleMinor = allocated,
+            remainingDueMinor = if (skipped) 0L else (occurrence.amountMinor - allocated).coerceAtLeast(0L),
+            state = occurrenceState(occurrence.amountMinor, allocated, skipped)
+        )
     }
 
     fun financingCostMinor(profile: DebtProfileEntity, terms: FinancingTermsEntity?): Long? = when (terms?.financingType) {

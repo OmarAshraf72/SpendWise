@@ -34,4 +34,18 @@ object CommitmentPeriodLogic {
             remainingMinor = counted.filter { it.status == CommitmentOccurrenceStatus.UNPAID }.sumOf { it.amountMinor }
         )
     }
+
+    /**
+     * Scheduled-period semantics: the due date selects the period. Principal and
+     * financing allocations linked to that occurrence count as paid regardless of
+     * their payment date; late charges and linked expense transactions do not count.
+     */
+    fun summaryWithPayments(progress: List<CommitmentOccurrenceProgress>): CommitmentPeriodSummary {
+        val counted = progress.filter { it.state != DebtOccurrencePaymentState.SKIPPED }
+        return CommitmentPeriodSummary(
+            committedMinor = counted.sumOf { it.occurrence.amountMinor },
+            paidMinor = counted.sumOf { it.paidTowardScheduleMinor },
+            remainingMinor = counted.sumOf { it.remainingDueMinor }
+        )
+    }
 }

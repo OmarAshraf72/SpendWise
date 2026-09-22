@@ -69,6 +69,53 @@ class DebtCalculationsTest {
         assertNull(DebtCalculator.financingCostMinor(profile, null))
     }
 
+    @Test fun oneTimeDebtWithoutFinancingDerivesAmountFromPrincipal() {
+        val result = DebtCalculator.oneTimeAmount(10_000_00, null, 6_000_00)
+        assertEquals(10_000_00L, result?.amountMinor)
+        assertEquals(OneTimeAmountSource.PRINCIPAL, result?.source)
+    }
+
+    @Test fun oneTimeFixedTotalUsesTotalRepayableAndKeepsPrincipalDistinct() {
+        val result = DebtCalculator.oneTimeAmount(
+            10_000_00,
+            financing(FinancingType.FIXED_TOTAL, total = 12_000_00),
+            6_000_00
+        )
+        assertEquals(12_000_00L, result?.amountMinor)
+        assertEquals(OneTimeAmountSource.FIXED_TOTAL_REPAYABLE, result?.source)
+        assertEquals(2_000_00L, DebtCalculator.financingCostMinor(profile(principal = 10_000_00), financing(FinancingType.FIXED_TOTAL, total = 12_000_00)))
+    }
+
+    @Test fun oneTimeRateOrUnknownTermsRequireExplicitAmountDue() {
+        val rate = financing(FinancingType.USER_PROVIDED_RATE, rate = 1_000)
+        assertNull(DebtCalculator.oneTimeAmount(10_000_00, rate, null))
+        assertEquals(11_000_00L, DebtCalculator.oneTimeAmount(10_000_00, rate, 11_000_00)?.amountMinor)
+        assertEquals(
+            OneTimeAmountSource.EXPLICIT_AMOUNT_DUE,
+            DebtCalculator.oneTimeAmount(10_000_00, financing(FinancingType.UNKNOWN_DETAILS), 10_500_00)?.source
+        )
+    }
+
+    @Test fun occurrenceProgressCountsPrincipalAndFinanceButExcludesLateChargesAndCapsOverpayment() {
+        val due = LocalDate.parse("2026-09-23")
+        val occurrence = debtOccurrence(due, 10_000_00)
+        val debt = profile(RepaymentMode.FIXED_INSTALLMENTS, 10_000_00)
+        val partial = DebtCalculator.occurrenceProgress(occurrence, debt, listOf(
+            payment(1, 6_500_00, 5_500_00, finance = 500_00, late = 500_00, occurrence = due)
+        ))
+        assertEquals(6_000_00, partial.paidTowardScheduleMinor)
+        assertEquals(4_000_00, partial.remainingDueMinor)
+        assertEquals(DebtOccurrencePaymentState.PARTIALLY_PAID, partial.state)
+
+        val full = DebtCalculator.occurrenceProgress(occurrence, debt, listOf(
+            payment(1, 6_500_00, 5_500_00, finance = 500_00, late = 500_00, occurrence = due),
+            payment(2, 6_000_00, 6_000_00, occurrence = due, linkedTransactionId = 99)
+        ))
+        assertEquals(10_000_00, full.paidTowardScheduleMinor)
+        assertEquals(0, full.remainingDueMinor)
+        assertEquals(DebtOccurrencePaymentState.PAID, full.state)
+    }
+
     @Test fun noRuleNotOverdueAndGraceBoundaryProduceNoCharge() {
         val due = LocalDate.parse("2026-10-01")
         assertEquals(0, LateChargeCalculator.calculate(10_000_00, 50_000_00, due, due.plusDays(20), null).estimatedChargeMinor)
@@ -117,9 +164,15 @@ class DebtCalculationsTest {
         1, 1, "Creditor", principal, LocalDate.parse("2026-01-01").toEpochDay(), null, mode, null, false, 1, 1
     )
 
-    private fun payment(id: Long, total: Long, principal: Long, finance: Long = 0, late: Long = 0, linkedTransactionId: Long? = null, date: String = "2026-09-05", created: Long = id) = DebtPaymentEntity(
-        id, 1, null, LocalDate.parse(date).toEpochDay(), total, principal, finance, late, linkedTransactionId, null, "key-$id", created
+    private fun payment(id: Long, total: Long, principal: Long, finance: Long = 0, late: Long = 0, linkedTransactionId: Long? = null, date: String = "2026-09-05", created: Long = id, occurrence: LocalDate? = null) = DebtPaymentEntity(
+        id, 1, occurrence?.toEpochDay(), LocalDate.parse(date).toEpochDay(), total, principal, finance, late, linkedTransactionId, null, "key-$id", created
     )
+
+    private fun debtOccurrence(due: LocalDate, amount: Long): CommitmentOccurrence {
+        val commitment = FinancialCommitmentEntity(1, "Debt", amount, CommitmentType.INSTALLMENT, CommitmentFrequency.MONTHLY,
+            due.toEpochDay(), null, due.toEpochDay(), true, null, null, 1, 1)
+        return CommitmentOccurrence(CommitmentWithMerchant(commitment, null), due, CommitmentOccurrenceStatus.UNPAID)
+    }
 
     private fun financing(type: FinancingType, total: Long? = null, rate: Long? = null) = FinancingTermsEntity(
         1, 1, type, total, rate, RatePeriod.ANNUAL, RateBasis.ORIGINAL_PRINCIPAL, FinancingCalculationMethod.CONTRACT_DEFINED, 1, 1

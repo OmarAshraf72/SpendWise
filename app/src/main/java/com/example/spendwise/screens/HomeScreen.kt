@@ -31,18 +31,22 @@ import com.example.spendwise.viewmodel.CategorySpendingUi
 import com.example.spendwise.viewmodel.HomeUiState
 import com.example.spendwise.viewmodel.HomeViewModel
 import com.example.spendwise.viewmodel.CommitmentsViewModel
+import com.example.spendwise.viewmodel.AssetsViewModel
 
 @Composable
 fun HomeScreen(
     onAddExpense: () -> Unit,
     onAddIncome: () -> Unit,
     onCommitments: () -> Unit,
+    onAssets: () -> Unit,
     onSettings: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
-    commitmentsViewModel: CommitmentsViewModel = viewModel()
+    commitmentsViewModel: CommitmentsViewModel = viewModel(),
+    assetsViewModel: AssetsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val commitments by commitmentsViewModel.uiState.collectAsStateWithLifecycle()
+    val assets by assetsViewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -71,9 +75,22 @@ fun HomeScreen(
 
         SummaryCard(uiState)
         UpcomingCommitmentsCard(commitments, onCommitments)
+        if (assets.attentionCount > 0) AssetsAttentionCard(assets, onAssets)
         SpendingBreakdown(uiState.categorySpending)
         InsightCard(uiState.insight)
         QuickActions(onAddExpense, onAddIncome)
+    }
+}
+
+@Composable
+private fun AssetsAttentionCard(state: com.example.spendwise.viewmodel.AssetsUiState, onAssets: () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Assets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("${state.attentionCount} thing${if (state.attentionCount == 1) "" else "s"} need attention")
+            state.cards.firstOrNull { it.attention != null }?.let { Text("${it.asset.name}: ${it.attention}") }
+            TextButton(onClick = onAssets) { Text("View assets") }
+        }
     }
 }
 

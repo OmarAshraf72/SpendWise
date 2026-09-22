@@ -19,7 +19,8 @@ data class DebtSummaryUi(
     val profile: DebtProfileEntity,
     val commitment: CommitmentWithMerchant,
     val balance: DebtBalance,
-    val nextOccurrence: CommitmentOccurrence?
+    val nextOccurrence: CommitmentOccurrence?,
+    val nextOccurrencePaidMinor: Long = 0
 )
 
 data class DebtPortfolioSummary(val originalMinor: Long = 0, val principalPaidMinor: Long = 0, val remainingMinor: Long = 0)
@@ -31,6 +32,7 @@ data class CommitmentsUiState(
     val viewMode: CommitmentViewMode = CommitmentViewMode.MONTH,
     val periodSummary: CommitmentPeriodSummary = CommitmentPeriodSummary(0, 0, 0),
     val displayedOccurrences: List<CommitmentOccurrence> = emptyList(),
+    val occurrenceProgress: Map<String, CommitmentOccurrenceProgress> = emptyMap(),
     val upcomingByMonth: Map<YearMonth, List<CommitmentOccurrence>> = emptyMap(),
     val overdue: List<CommitmentOccurrence> = emptyList(),
     val forecast: List<CommitmentMonthTotal> = emptyList(),
@@ -87,6 +89,14 @@ class CommitmentsViewModel(application: Application) : AndroidViewModel(applicat
             CommitmentViewMode.ALL_UPCOMING -> CommitmentPeriodLogic.allUpcoming(occurrences, today)
         }
         val paymentsByProfile = base.debts.payments.groupBy(DebtPaymentEntity::debtProfileId)
+        val progressByKey = occurrences.associate { occurrence ->
+            val profile = profilesByCommitment[occurrence.commitment.commitment.id]
+            occurrenceProgressKey(occurrence) to DebtCalculator.occurrenceProgress(
+                occurrence,
+                profile,
+                profile?.let { paymentsByProfile[it.id] }.orEmpty()
+            )
+        }
         val occurrenceByCommitment = occurrences.groupBy { it.commitment.commitment.id }
         val activeDebts = base.debts.profiles.mapNotNull { profile ->
             val commitment = allCommitments.firstOrNull { it.commitment.id == profile.commitmentId } ?: return@mapNotNull null
@@ -97,11 +107,16 @@ class CommitmentsViewModel(application: Application) : AndroidViewModel(applicat
                 CommitmentGroupFilter.OTHER -> false
             }
             if (!include) return@mapNotNull null
+            val next = occurrenceByCommitment[profile.commitmentId].orEmpty().firstOrNull {
+                it.dueDate >= today && progressByKey[occurrenceProgressKey(it)]?.state !in
+                    setOf(DebtOccurrencePaymentState.PAID, DebtOccurrencePaymentState.SKIPPED)
+            }
             DebtSummaryUi(
                 profile,
                 commitment,
                 DebtCalculator.balance(profile, paymentsByProfile[profile.id].orEmpty()),
-                occurrenceByCommitment[profile.commitmentId].orEmpty().firstOrNull { it.dueDate >= today && it.status == CommitmentOccurrenceStatus.UNPAID }
+                next,
+                next?.let { progressByKey[occurrenceProgressKey(it)]?.paidTowardScheduleMinor } ?: 0
             )
         }
         CommitmentsUiState(
@@ -109,8 +124,9 @@ class CommitmentsViewModel(application: Application) : AndroidViewModel(applicat
             summary = CommitmentCalculator.summary(occurrences, today),
             selectedMonth = control.month,
             viewMode = control.mode,
-            periodSummary = CommitmentPeriodLogic.summary(displayed),
+            periodSummary = CommitmentPeriodLogic.summaryWithPayments(displayed.mapNotNull { progressByKey[occurrenceProgressKey(it)] }),
             displayedOccurrences = displayed,
+            occurrenceProgress = progressByKey,
             upcomingByMonth = if (control.mode == CommitmentViewMode.ALL_UPCOMING) CommitmentPeriodLogic.groupByMonth(displayed) else emptyMap(),
             overdue = occurrences.filter { it.dueDate < today && it.status == CommitmentOccurrenceStatus.UNPAID },
             forecast = CommitmentCalculator.forecast(occurrences, control.month),
@@ -166,5 +182,8 @@ class CommitmentsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 }
+
+fun occurrenceProgressKey(occurrence: CommitmentOccurrence): String =
+    "${occurrence.commitment.commitment.id}:${occurrence.dueDate.toEpochDay()}"
 
 private fun LocalDate.toMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()

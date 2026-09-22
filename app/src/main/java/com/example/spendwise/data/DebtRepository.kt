@@ -47,25 +47,25 @@ class DebtRepository(private val database: SpendWiseDatabase) {
     ) { first, second -> DebtData(first.first, first.second, second.first, second.second) }
 
     suspend fun saveDebt(input: DebtDefinitionInput): Long = database.withTransaction {
-        require(input.commitment.title.isNotBlank() && input.originalPrincipalMinor > 0)
-        require(input.repaymentMode == RepaymentMode.OPEN_ENDED || input.commitment.amountMinor > 0)
-        require(input.financingTerms?.takeIf { it.financingType == FinancingType.FIXED_TOTAL }
-            ?.totalRepayableMinor?.let { it >= input.originalPrincipalMinor } != false)
-        val commitmentId = if (input.commitment.id == 0L) commitmentDao.insert(input.commitment) else {
-            commitmentDao.update(input.commitment)
-            input.commitment.id
+        val definition = canonicalDebtDefinition(input)
+        require(definition.commitment.title.isNotBlank() && definition.originalPrincipalMinor > 0)
+        require(definition.financingTerms?.takeIf { it.financingType == FinancingType.FIXED_TOTAL }
+            ?.totalRepayableMinor?.let { it >= definition.originalPrincipalMinor } != false)
+        val commitmentId = if (definition.commitment.id == 0L) commitmentDao.insert(definition.commitment) else {
+            commitmentDao.update(definition.commitment)
+            definition.commitment.id
         }
         val existing = dao.getProfileForCommitment(commitmentId)
-        val now = input.commitment.updatedAt
+        val now = definition.commitment.updatedAt
         val profile = DebtProfileEntity(
             id = existing?.id ?: 0,
             commitmentId = commitmentId,
-            creditorName = input.creditorName?.trim()?.takeIf(String::isNotBlank),
-            originalPrincipalMinor = input.originalPrincipalMinor,
-            startDateEpochDay = input.debtStartDate.toEpochDay(),
-            expectedEndDateEpochDay = input.expectedEndDate?.toEpochDay(),
-            repaymentMode = input.repaymentMode,
-            notes = input.debtNotes?.trim()?.takeIf(String::isNotBlank),
+            creditorName = definition.creditorName?.trim()?.takeIf(String::isNotBlank),
+            originalPrincipalMinor = definition.originalPrincipalMinor,
+            startDateEpochDay = definition.debtStartDate.toEpochDay(),
+            expectedEndDateEpochDay = definition.expectedEndDate?.toEpochDay(),
+            repaymentMode = definition.repaymentMode,
+            notes = definition.debtNotes?.trim()?.takeIf(String::isNotBlank),
             isArchived = existing?.isArchived ?: false,
             createdAt = existing?.createdAt ?: now,
             updatedAt = now
@@ -75,12 +75,12 @@ class DebtRepository(private val database: SpendWiseDatabase) {
             existing.id
         }
         val existingTerms = dao.getFinancing(profileId)
-        if (input.financingTerms == null) dao.deleteFinancing(profileId) else dao.putFinancing(
-            input.financingTerms.copy(id = existingTerms?.id ?: 0, debtProfileId = profileId, createdAt = existingTerms?.createdAt ?: now, updatedAt = now)
+        if (definition.financingTerms == null) dao.deleteFinancing(profileId) else dao.putFinancing(
+            definition.financingTerms.copy(id = existingTerms?.id ?: 0, debtProfileId = profileId, createdAt = existingTerms?.createdAt ?: now, updatedAt = now)
         )
         val existingRule = dao.getLateRule(profileId)
-        if (input.lateRule == null) dao.deleteLateRule(profileId) else dao.putLateRule(
-            input.lateRule.copy(id = existingRule?.id ?: 0, debtProfileId = profileId, createdAt = existingRule?.createdAt ?: now, updatedAt = now)
+        if (definition.lateRule == null) dao.deleteLateRule(profileId) else dao.putLateRule(
+            definition.lateRule.copy(id = existingRule?.id ?: 0, debtProfileId = profileId, createdAt = existingRule?.createdAt ?: now, updatedAt = now)
         )
         profileId
     }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.*
@@ -53,8 +54,7 @@ fun AddCommitmentScreen(
     var typeExpanded by remember { mutableStateOf(false) }
     var frequencyExpanded by remember { mutableStateOf(false) }
 
-    var repaymentMode by rememberSaveable { mutableStateOf(RepaymentMode.FIXED_INSTALLMENTS) }
-    var repaymentExpanded by remember { mutableStateOf(false) }
+    var repaymentMode by rememberSaveable { mutableStateOf<RepaymentMode?>(null) }
     var creditor by rememberSaveable { mutableStateOf("") }
     var originalPrincipal by rememberSaveable { mutableStateOf("") }
     var debtStartEpoch by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
@@ -76,18 +76,24 @@ fun AddCommitmentScreen(
     var minimumCharge by rememberSaveable { mutableStateOf("") }
     var maximumCharge by rememberSaveable { mutableStateOf("") }
     var isCompounding by rememberSaveable { mutableStateOf(false) }
+    var debtExpectedEndEpoch by rememberSaveable { mutableStateOf<Long?>(null) }
+    var fixedDueConfirmed by rememberSaveable { mutableStateOf(commitmentId == null) }
+    var loadingExisting by remember { mutableStateOf(commitmentId != null) }
 
     LaunchedEffect(commitmentId) {
         commitmentId?.let { key ->
             viewModel.getCommitment(key)?.let { existing ->
                 id = existing.id; originalCreatedAt = existing.createdAt; title = existing.title
                 amount = minorToInput(existing.amountMinor); type = existing.type; frequency = existing.frequency
-                dueDateEpoch = existing.nextDueDateEpochDay; hasEndDate = existing.endDateEpochDay != null
+                dueDateEpoch = existing.nextDueDateEpochDay; fixedDueConfirmed = true; hasEndDate = existing.endDateEpochDay != null
                 existing.endDateEpochDay?.let { endDateEpoch = it }; merchantId = existing.merchantId; notes = existing.notes.orEmpty()
                 viewModel.getDebtForCommitment(key)?.let { debt ->
                     creditor = debt.creditorName.orEmpty(); originalPrincipal = minorToInput(debt.originalPrincipalMinor)
                     debtStartEpoch = debt.startDateEpochDay; repaymentMode = debt.repaymentMode
-                    debt.expectedEndDateEpochDay?.let { hasEndDate = true; endDateEpoch = it }
+                    debtExpectedEndEpoch = debt.expectedEndDateEpochDay
+                    if (debt.repaymentMode == RepaymentMode.OPEN_ENDED) {
+                        amount = ""; frequency = CommitmentFrequency.MONTHLY; hasEndDate = false
+                    } else debt.expectedEndDateEpochDay?.let { hasEndDate = true; endDateEpoch = it }
                     viewModel.getFinancing(debt.id)?.let { terms ->
                         hasFinancing = true; financingType = terms.financingType
                         totalRepayable = terms.totalRepayableMinor?.let(::minorToInput).orEmpty()
@@ -103,6 +109,7 @@ fun AddCommitmentScreen(
                 }
             }
         }
+        loadingExisting = false
     }
     LaunchedEffect(merchantId, merchants) {
         if (merchantId != null && merchantQuery.isBlank()) merchantQuery = merchants.firstOrNull { it.id == merchantId }?.displayName.orEmpty()
@@ -112,10 +119,25 @@ fun AddCommitmentScreen(
     val fixedSchedule = !isDebt || repaymentMode == RepaymentMode.FIXED_INSTALLMENTS
     val parsedAmount = parseEgpToMinor(amount)
     val parsedOriginal = parseEgpToMinor(originalPrincipal)
+    val draftFinancingTerms = if (hasFinancing) buildFinancingTerms(
+        true, financingType, totalRepayable, ratePercent, ratePeriod, rateBasis, calculationMethod
+    ) else null
+    val isOneTimeFixedDebt = isDebt && fixedSchedule && frequency == CommitmentFrequency.ONE_TIME
+    val oneTimeDebtAmount = if (isOneTimeFixedDebt && (!hasFinancing || draftFinancingTerms != null)) {
+        DebtCalculator.oneTimeAmount(parsedOriginal ?: 0, draftFinancingTerms, parsedAmount)
+    } else null
+    val scheduledAmountMinor = if (isOneTimeFixedDebt) oneTimeDebtAmount?.amountMinor else parsedAmount
+    val oneTimeNeedsExplicitAmount = isOneTimeFixedDebt && hasFinancing &&
+        financingType in setOf(FinancingType.USER_PROVIDED_RATE, FinancingType.UNKNOWN_DETAILS)
     val effectiveHasEndDate = hasEndDate && frequency != CommitmentFrequency.ONE_TIME && fixedSchedule
     val invalidEnd = effectiveHasEndDate && endDateEpoch < dueDateEpoch
     val previewDates = if (fixedSchedule) CommitmentRecurrence.preview(frequency, LocalDate.ofEpochDay(dueDateEpoch), endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay)) else emptyList()
     val merchantSuggestions = remember(merchantQuery, merchants) { MerchantRanker.rank(merchantQuery, merchants) }
+
+    if (loadingExisting) {
+        CircularProgressIndicator(Modifier.padding(24.dp))
+        return
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(if (commitmentId == null) "Add Commitment" else "Edit Commitment", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
@@ -127,16 +149,59 @@ fun AddCommitmentScreen(
             OutlinedTextField(creditor, { creditor = it }, label = { Text("Creditor / entity") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             MoneyField("Original principal", originalPrincipal, { originalPrincipal = it }, showValidation && (parsedOriginal == null || parsedOriginal <= 0))
             DateField("Debt start date", LocalDate.ofEpochDay(debtStartEpoch)) { picker = "debtStart" }
-            EnumDropdown("Repayment style", repaymentMode.displayName(), RepaymentMode.entries.toList(), repaymentExpanded, { repaymentExpanded = it }, { repaymentMode = it; repaymentExpanded = false }) { it.displayName() }
+            Text("Repayment style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            RepaymentMode.entries.forEach { option ->
+                Row(Modifier.fillMaxWidth().clickable {
+                    if (repaymentMode != option) {
+                        amount = ""
+                        frequency = CommitmentFrequency.MONTHLY
+                        dueDateEpoch = LocalDate.now().plusDays(1).toEpochDay()
+                        fixedDueConfirmed = option == RepaymentMode.OPEN_ENDED
+                        hasEndDate = false
+                        debtExpectedEndEpoch = null
+                    }
+                    repaymentMode = option
+                }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    RadioButton(selected = repaymentMode == option, onClick = {
+                        if (repaymentMode != option) {
+                            amount = ""
+                            frequency = CommitmentFrequency.MONTHLY
+                            dueDateEpoch = LocalDate.now().plusDays(1).toEpochDay()
+                            fixedDueConfirmed = option == RepaymentMode.OPEN_ENDED
+                            hasEndDate = false
+                            debtExpectedEndEpoch = null
+                        }
+                        repaymentMode = option
+                    })
+                    Text(option.displayName(), modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+            if (showValidation && repaymentMode == null) Text("Choose a repayment style.", color = MaterialTheme.colorScheme.error)
         }
 
         if (fixedSchedule) {
-            MoneyField(if (isDebt) "Scheduled payment" else "Amount", amount, { amount = it }, showValidation && (parsedAmount == null || parsedAmount <= 0))
-            EnumDropdown("Frequency", frequency.displayName(), CommitmentFrequency.entries.filter { it != CommitmentFrequency.CUSTOM }, frequencyExpanded, { frequencyExpanded = it }, { frequency = it; frequencyExpanded = false }) { it.displayName() }
-            DateField(if (frequency == CommitmentFrequency.ONE_TIME) "Due date" else "First payment date", LocalDate.ofEpochDay(dueDateEpoch)) { picker = "due" }
+            if (isDebt) {
+                EnumDropdown("Frequency", frequency.displayName(), CommitmentFrequency.entries.filter { it != CommitmentFrequency.CUSTOM }, frequencyExpanded, { frequencyExpanded = it }, { frequency = it; frequencyExpanded = false }) { it.displayName() }
+                when {
+                    isOneTimeFixedDebt && oneTimeNeedsExplicitAmount -> MoneyField(
+                        "Amount due", amount, { amount = it }, showValidation && (scheduledAmountMinor == null || scheduledAmountMinor <= 0)
+                    )
+                    isOneTimeFixedDebt -> ReadOnlyAmountDue(oneTimeDebtAmount)
+                    else -> MoneyField("Installment amount", amount, { amount = it }, showValidation && (parsedAmount == null || parsedAmount <= 0))
+                }
+            } else {
+                MoneyField("Amount", amount, { amount = it }, showValidation && (parsedAmount == null || parsedAmount <= 0))
+                EnumDropdown("Frequency", frequency.displayName(), CommitmentFrequency.entries.filter { it != CommitmentFrequency.CUSTOM }, frequencyExpanded, { frequencyExpanded = it }, { frequency = it; frequencyExpanded = false }) { it.displayName() }
+            }
+            DateField(if (frequency == CommitmentFrequency.ONE_TIME) "Due date" else "First payment date", LocalDate.ofEpochDay(dueDateEpoch), showValidation && !fixedDueConfirmed) { picker = "due" }
+            if (showValidation && !fixedDueConfirmed) Text("Select the first payment date.", color = MaterialTheme.colorScheme.error)
             if (frequency != CommitmentFrequency.ONE_TIME) EndDateFields(hasEndDate, endDateEpoch, dueDateEpoch, invalidEnd, { hasEndDate = it }, { endDateEpoch = it }, { picker = "end" })
-        } else {
+        } else if (isDebt && repaymentMode == RepaymentMode.OPEN_ENDED) {
             Text("Open-ended debts create no fictional future payments or forecast amounts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            debtExpectedEndEpoch?.let { epoch -> DateField("Expected end date (optional)", LocalDate.ofEpochDay(epoch)) { picker = "debtExpectedEnd" } }
+            if (debtExpectedEndEpoch == null) OutlinedButton(onClick = { picker = "debtExpectedEnd" }, modifier = Modifier.fillMaxWidth()) { Text("Add expected end date") }
+            if (debtExpectedEndEpoch != null) TextButton(onClick = { debtExpectedEndEpoch = null }) { Text("Clear expected end date") }
+            if (showValidation && debtExpectedEndEpoch != null && debtExpectedEndEpoch!! < debtStartEpoch) Text("Expected end date must follow the debt start date.", color = MaterialTheme.colorScheme.error)
         }
 
         if (isDebt) {
@@ -180,29 +245,33 @@ fun AddCommitmentScreen(
         }
         Button(onClick = {
             showValidation = true
-            val validBase = title.isNotBlank() && !invalidEnd && (!fixedSchedule || parsedAmount != null && parsedAmount > 0)
+            val validBase = title.isNotBlank() && (!isDebt || repaymentMode != null) && !invalidEnd &&
+                (fixedSchedule || debtExpectedEndEpoch == null || debtExpectedEndEpoch!! >= debtStartEpoch) &&
+                (!fixedSchedule || fixedDueConfirmed && scheduledAmountMinor != null && scheduledAmountMinor > 0)
             if (validBase && (!isDebt || parsedOriginal != null && parsedOriginal > 0)) {
                 val now = System.currentTimeMillis()
                 val due = if (fixedSchedule) LocalDate.ofEpochDay(dueDateEpoch) else LocalDate.ofEpochDay(debtStartEpoch)
-                val commitment = FinancialCommitmentEntity(id, title.trim(), if (fixedSchedule) parsedAmount!! else 0, type,
+                val commitment = FinancialCommitmentEntity(id, title.trim(), if (fixedSchedule) scheduledAmountMinor!! else 0, type,
                     if (fixedSchedule) frequency else CommitmentFrequency.ONE_TIME, due.toEpochDay(), endDateEpoch.takeIf { effectiveHasEndDate }, due.toEpochDay(), true,
                     merchantId, notes.trim().takeIf(String::isNotBlank), originalCreatedAt ?: now, now)
                 if (!isDebt) viewModel.saveCommitment(id, title, parsedAmount!!, type, frequency, due, endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay), merchantId, notes, originalCreatedAt, onSaved)
                 else {
-                    val financingTerms = buildFinancingTerms(hasFinancing, financingType, totalRepayable, ratePercent, ratePeriod, rateBasis, calculationMethod)
+                    val financingTerms = draftFinancingTerms
                     val lateRule = buildLateRule(hasLateRule, graceDays, chargeType, chargeValue, chargeInterval, chargeBasis, minimumCharge, maximumCharge, isCompounding)
                     if ((hasFinancing && financingTerms == null) || (hasLateRule && lateRule == null)) return@Button
                     if (financingTerms?.financingType == FinancingType.FIXED_TOTAL && financingTerms.totalRepayableMinor!! < parsedOriginal!!) return@Button
-                    viewModel.saveDebt(DebtDefinitionInput(commitment, creditor, parsedOriginal!!, LocalDate.ofEpochDay(debtStartEpoch), endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay), repaymentMode, notes, financingTerms, lateRule), onSaved)
+                    val expectedEnd = if (repaymentMode == RepaymentMode.OPEN_ENDED) debtExpectedEndEpoch?.let(LocalDate::ofEpochDay)
+                        else endDateEpoch.takeIf { effectiveHasEndDate }?.let(LocalDate::ofEpochDay)
+                    viewModel.saveDebt(DebtDefinitionInput(commitment, creditor, parsedOriginal!!, LocalDate.ofEpochDay(debtStartEpoch), expectedEnd, checkNotNull(repaymentMode), notes, financingTerms, lateRule), onSaved)
                 }
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("Save Commitment") }
     }
 
     picker?.let { target ->
-        val initial = when (target) { "debtStart" -> debtStartEpoch; "due" -> dueDateEpoch; else -> endDateEpoch }
+        val initial = when (target) { "debtStart" -> debtStartEpoch; "due" -> dueDateEpoch; "debtExpectedEnd" -> debtExpectedEndEpoch ?: LocalDate.ofEpochDay(debtStartEpoch).plusYears(1).toEpochDay(); else -> endDateEpoch }
         SpendWiseDatePickerDialog(LocalDate.ofEpochDay(initial), onDateSelected = { date ->
-            when (target) { "debtStart" -> debtStartEpoch = date.toEpochDay(); "due" -> dueDateEpoch = date.toEpochDay(); else -> endDateEpoch = date.toEpochDay() }
+            when (target) { "debtStart" -> debtStartEpoch = date.toEpochDay(); "due" -> { dueDateEpoch = date.toEpochDay(); fixedDueConfirmed = true }; "debtExpectedEnd" -> debtExpectedEndEpoch = date.toEpochDay(); else -> endDateEpoch = date.toEpochDay() }
             picker = null
         }, onDismiss = { picker = null })
     }
@@ -216,6 +285,22 @@ fun AddCommitmentScreen(
 
 @Composable private fun MoneyField(label: String, value: String, onChange: (String) -> Unit, error: Boolean = false) {
     OutlinedTextField(value, onChange, label = { Text(label) }, suffix = { Text("EGP") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, isError = error, modifier = Modifier.fillMaxWidth())
+}
+
+@Composable private fun ReadOnlyAmountDue(amount: OneTimeDebtAmount?) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Amount due", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(amount?.amountMinor?.let(::formatEgp) ?: "Enter valid financing terms below", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            val source = when (amount?.source) {
+                OneTimeAmountSource.PRINCIPAL -> "original principal"
+                OneTimeAmountSource.FIXED_TOTAL_REPAYABLE -> "fixed total repayable"
+                OneTimeAmountSource.EXPLICIT_AMOUNT_DUE -> "entered amount due"
+                null -> "debt terms"
+            }
+            Text("Derived from $source. Late charges are handled separately.", style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
 
 @Composable private fun EndDateFields(hasEnd: Boolean, endEpoch: Long, dueEpoch: Long, invalid: Boolean, setHasEnd: (Boolean) -> Unit, setEnd: (Long) -> Unit, open: () -> Unit) {

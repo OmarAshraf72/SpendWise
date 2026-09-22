@@ -37,6 +37,9 @@ import com.example.spendwise.screens.SettingsScreen
 import com.example.spendwise.screens.MoreScreen
 import com.example.spendwise.screens.DebtDetailScreen
 import com.example.spendwise.screens.TransactionsScreen
+import com.example.spendwise.screens.MyAssetsScreen
+import com.example.spendwise.screens.AddAssetScreen
+import com.example.spendwise.screens.AssetDetailScreen
 import com.example.spendwise.viewmodel.ReceiptViewModel
 import kotlinx.coroutines.launch
 
@@ -58,7 +61,11 @@ fun SpendWiseApp() {
     val categoriesRoute = "categories"
     val settingsRoute = "settings"
     val debtDetailRoute = "debt_detail/{debtProfileId}"
-    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, receiptCaptureRoute, receiptReviewRoute)
+    val assetsRoute = "assets"
+    val addAssetRoute = "add_asset"
+    val assetDetailRoute = "asset/{assetId}"
+    val editAssetRoute = "edit_asset/{assetId}"
+    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, editAssetRoute, assetDetailRoute, receiptCaptureRoute, receiptReviewRoute)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -96,6 +103,7 @@ fun SpendWiseApp() {
                     onAddExpense = { navController.navigate(addExpenseRoute) },
                     onAddIncome = { navController.navigate(addIncomeRoute) },
                     onCommitments = { navController.navigate(MainDestination.Commitments.route) },
+                    onAssets = { navController.navigate(assetsRoute) },
                     onSettings = { navController.navigate(settingsRoute) { launchSingleTop = true } }
                 )
             }
@@ -111,7 +119,15 @@ fun SpendWiseApp() {
                 )
             }
             composable(MainDestination.More.route) {
-                MoreScreen(onCategories = { navController.navigate(categoriesRoute) })
+                MoreScreen(onAssets = { navController.navigate(assetsRoute) }, onCategories = { navController.navigate(categoriesRoute) })
+            }
+            composable(assetsRoute) { MyAssetsScreen(onAdd = { navController.navigate(addAssetRoute) }, onOpen = { navController.navigate("asset/$it") }) }
+            composable(addAssetRoute) { AddAssetScreen(onSaved = { id -> navController.navigate("asset/$id") { popUpTo(addAssetRoute) { inclusive = true } } }, onCancel = { navController.popBackStack() }) }
+            composable(editAssetRoute, arguments = listOf(navArgument("assetId") { type = NavType.LongType })) { entry ->
+                AddAssetScreen(assetId = entry.arguments?.getLong("assetId"), onSaved = { navController.popBackStack() }, onCancel = { navController.popBackStack() })
+            }
+            composable(assetDetailRoute, arguments = listOf(navArgument("assetId") { type = NavType.LongType })) {
+                AssetDetailScreen(onBack = { navController.popBackStack() }, onEdit = { navController.navigate("edit_asset/$it") }, onCommitment = { navController.navigate(MainDestination.Commitments.route) })
             }
             composable(categoriesRoute) { CategoriesScreen() }
             composable(settingsRoute) { SettingsScreen(onBack = { navController.popBackStack() }) }
