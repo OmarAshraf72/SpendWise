@@ -3,6 +3,8 @@ package com.example.spendwise.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,8 +69,8 @@ fun CommitmentsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Row(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
+            Row(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
                     Text("Commitments", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                     Text("Plan future financial pressure", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -273,15 +275,20 @@ private fun CommitmentCard(
                 else -> null
             }
             statusLabel?.let { Text(it, color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 if (debtProfileId != null) {
-                    TextButton(onClick = { onDebtDetail(debtProfileId) }) { Text("Manage payment") }
+                    TextButton(onClick = { onDebtDetail(debtProfileId) }) { Text("Manage payment", maxLines = 1) }
                 } else if (occurrence.status == CommitmentOccurrenceStatus.UNPAID) {
-                    TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.PAID, false) }) { Text("Paid") }
-                    TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.PAID, true) }) { Text("Paid + expense") }
-                    TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.SKIPPED, false) }) { Text("Skip") }
+                    TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.PAID, false) }) { Text("Paid", maxLines = 1) }
+                    TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.PAID, true) }) { Text("Paid + expense", maxLines = 1) }
+                    TextButton(onClick = { setStatus(occurrence, CommitmentOccurrenceStatus.SKIPPED, false) }) { Text("Skip", maxLines = 1) }
                 }
-                TextButton(onClick = { onEdit(definition.id) }) { Text("Edit") }
+                TextButton(onClick = { onEdit(definition.id) }) { Text("Edit", maxLines = 1) }
             }
         }
     }

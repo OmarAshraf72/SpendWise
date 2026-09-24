@@ -1,0 +1,36 @@
+warning: in the working copy of 'app/build.gradle.kts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/androidTest/java/com/example/spendwise/navigation/NavigationCustomizationInstrumentedTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/AndroidManifest.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/MainActivity.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/data/AssetDao.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/data/AssetEntities.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/data/AssetRepository.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/data/SpendWiseDatabase.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/AddCommitmentScreen.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/AssetScreens.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/CommitmentsScreen.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/HomeScreen.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/InlineSearchSuggestions.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/MainScreens.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/screens/TransactionsScreen.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/ui/SpendWiseApp.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/example/spendwise/viewmodel/AssetsViewModel.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'gradle/libs.versions.toml', LF will be replaced by CRLF the next time Git touches it
+app/build.gradle.kts
+app/src/androidTest/java/com/example/spendwise/navigation/NavigationCustomizationInstrumentedTest.kt
+app/src/main/AndroidManifest.xml
+app/src/main/java/com/example/spendwise/MainActivity.kt
+app/src/main/java/com/example/spendwise/data/AssetDao.kt
+app/src/main/java/com/example/spendwise/data/AssetEntities.kt
+app/src/main/java/com/example/spendwise/data/AssetRepository.kt
+app/src/main/java/com/example/spendwise/data/SpendWiseDatabase.kt
+app/src/main/java/com/example/spendwise/screens/AddCommitmentScreen.kt
+app/src/main/java/com/example/spendwise/screens/AssetScreens.kt
+app/src/main/java/com/example/spendwise/screens/CommitmentsScreen.kt
+app/src/main/java/com/example/spendwise/screens/HomeScreen.kt
+app/src/main/java/com/example/spendwise/screens/InlineSearchSuggestions.kt
+app/src/main/java/com/example/spendwise/screens/MainScreens.kt
+app/src/main/java/com/example/spendwise/screens/TransactionsScreen.kt
+app/src/main/java/com/example/spendwise/ui/SpendWiseApp.kt
+app/src/main/java/com/example/spendwise/viewmodel/AssetsViewModel.kt
+gradle/libs.versions.toml

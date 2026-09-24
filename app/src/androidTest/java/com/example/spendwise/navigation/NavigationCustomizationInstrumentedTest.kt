@@ -2,10 +2,10 @@ package com.example.spendwise.navigation
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performTouchInput
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -28,12 +28,12 @@ class NavigationCustomizationInstrumentedTest {
                 )
             }
         }
-        composeRule.onNodeWithText("Move up").assertDoesNotExist()
-        composeRule.onNodeWithText("Move down").assertDoesNotExist()
+        composeRule.onAllNodesWithText("Move up").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Move down").assertCountEquals(0)
         composeRule.onNodeWithTag("navigation-row-ASSETS").performTouchInput {
             down(center)
             advanceEventTime(700)
-            moveBy(Offset(0f, -size.height * 1.4f))
+            moveBy(Offset(0f, -400f))
             advanceEventTime(200)
             up()
         }

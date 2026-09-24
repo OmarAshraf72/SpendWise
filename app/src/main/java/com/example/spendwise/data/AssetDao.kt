@@ -35,6 +35,22 @@ interface AssetDao {
     @Query("SELECT * FROM asset_maintenance_events ORDER BY performedDateEpochDay DESC, createdAt DESC")
     fun observeMaintenanceEvents(): Flow<List<AssetMaintenanceEventEntity>>
 
+    @Query("SELECT * FROM asset_checkpoints ORDER BY isActive DESC, id")
+    fun observeCheckpoints(): Flow<List<AssetCheckpointEntity>>
+
+    @Query("SELECT * FROM asset_checkpoint_events ORDER BY completedDateEpochDay DESC, id DESC")
+    fun observeCheckpointEvents(): Flow<List<AssetCheckpointEventEntity>>
+
+    @Query("SELECT * FROM asset_checkpoints WHERE id = :id LIMIT 1")
+    suspend fun getCheckpoint(id: Long): AssetCheckpointEntity?
+
+    @Query("SELECT * FROM asset_checkpoint_events WHERE checkpointId = :id ORDER BY completedDateEpochDay DESC, createdAt DESC LIMIT 1")
+    suspend fun latestCheckpointEvent(id: Long): AssetCheckpointEventEntity?
+
+    @Insert suspend fun insertCheckpoint(item: AssetCheckpointEntity): Long
+    @Update suspend fun updateCheckpoint(item: AssetCheckpointEntity)
+    @Insert suspend fun insertCheckpointEvent(item: AssetCheckpointEventEntity): Long
+
     @Query("SELECT * FROM asset_documents ORDER BY createdAt DESC")
     fun observeDocuments(): Flow<List<AssetDocumentEntity>>
 
@@ -61,7 +77,7 @@ interface AssetDao {
     @Query("UPDATE asset_documents SET title = :title WHERE id = :id") suspend fun renameDocument(id: Long, title: String)
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun linkCommitment(item: AssetCommitmentLinkEntity): Long
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun linkTransaction(item: AssetTransactionLinkEntity): Long
-    @Query("UPDATE assets SET currentMileageKm = :mileage, updatedAt = :now WHERE id = :assetId")
+    @Query("UPDATE assets SET currentMileageKm = :mileage, mileageUpdatedAt = :now, updatedAt = :now WHERE id = :assetId")
     suspend fun updateMileage(assetId: Long, mileage: Long, now: Long)
     @Query("UPDATE assets SET isArchived = 1, updatedAt = :now WHERE id = :assetId")
     suspend fun archive(assetId: Long, now: Long)

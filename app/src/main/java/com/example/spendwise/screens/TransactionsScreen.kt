@@ -64,7 +64,7 @@ fun TransactionsScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 104.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -98,7 +98,7 @@ fun TransactionsScreen(
         ExtendedFloatingActionButton(
             onClick = onAddExpense,
             icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-            text = { Text("Add Expense") },
+            text = { Text("Add Expense", maxLines = 1) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
         )
     }

@@ -19,6 +19,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,8 +57,13 @@ import com.example.spendwise.viewmodel.ReceiptViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun SpendWiseApp() {
+fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
     val navController = rememberNavController()
+    LaunchedEffect(notificationAssetRequest) {
+        notificationAssetRequest?.let { (assetId, _) ->
+            navController.navigate("asset/$assetId") { launchSingleTop = true }
+        }
+    }
     val navigationViewModel: NavigationViewModel = viewModel()
     val navigationConfiguration by navigationViewModel.configuration.collectAsStateWithLifecycle()
     val receiptViewModel: ReceiptViewModel? = if (FeatureFlags.ENABLE_RECEIPT_SCAN) viewModel() else null

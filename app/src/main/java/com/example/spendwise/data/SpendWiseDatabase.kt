@@ -19,14 +19,16 @@ import kotlinx.coroutines.launch
         DebtProfileEntity::class, DebtPaymentEntity::class, FinancingTermsEntity::class, LatePaymentRuleEntity::class
         , AssetEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
         AssetMaintenanceRuleEntity::class, AssetMaintenanceEventEntity::class, AssetDocumentEntity::class,
-        AssetCommitmentLinkEntity::class, AssetTransactionLinkEntity::class
+        AssetCommitmentLinkEntity::class, AssetTransactionLinkEntity::class,
+        AssetCheckpointEntity::class, AssetCheckpointEventEntity::class,
+        AssetReminderRuleEntity::class, AssetNotificationDeliveryEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(
     CategoryTypeConverter::class, TransactionConverters::class, MerchantSourceConverter::class,
-    CommitmentConverters::class, DebtConverters::class, AssetConverters::class
+    CommitmentConverters::class, DebtConverters::class, AssetConverters::class, AssetReminderConverters::class
 )
 abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
@@ -36,6 +38,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
     abstract fun commitmentDao(): CommitmentDao
     abstract fun debtDao(): DebtDao
     abstract fun assetDao(): AssetDao
+    abstract fun assetReminderDao(): AssetReminderDao
 
     companion object {
         @Volatile private var instance: SpendWiseDatabase? = null
@@ -48,7 +51,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 "spendwise.db"
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, MIGRATION_8_9
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -467,6 +470,38 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                     FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE,
                     FOREIGN KEY(transactionId) REFERENCES transactions(id) ON UPDATE NO ACTION ON DELETE NO ACTION)""".trimIndent())
                 db.execSQL("CREATE INDEX index_asset_transaction_links_transactionId ON asset_transaction_links (transactionId)")
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE assets ADD COLUMN mileageUpdatedAt INTEGER")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_checkpoints (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL, title TEXT NOT NULL,
+                    checkpointType TEXT NOT NULL, triggerMode TEXT NOT NULL, dueDateEpochDay INTEGER,
+                    dueMileageKm INTEGER, repeatMonths INTEGER, repeatKm INTEGER, warningDays INTEGER,
+                    warningKm INTEGER, notes TEXT, isActive INTEGER NOT NULL, createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL, rescheduledDueDateEpochDay INTEGER, rescheduledDueMileageKm INTEGER,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_checkpoints_assetId ON asset_checkpoints (assetId)")
+                db.execSQL("CREATE INDEX index_asset_checkpoints_isActive ON asset_checkpoints (isActive)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_checkpoint_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, checkpointId INTEGER NOT NULL,
+                    completedDateEpochDay INTEGER NOT NULL, completedMileageKm INTEGER, note TEXT,
+                    createdAt INTEGER NOT NULL, dueDateEpochDay INTEGER, dueMileageKm INTEGER,
+                    FOREIGN KEY(checkpointId) REFERENCES asset_checkpoints(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_checkpoint_events_checkpointId ON asset_checkpoint_events (checkpointId)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_reminder_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, assetId INTEGER NOT NULL,
+                    sourceType TEXT NOT NULL, sourceId INTEGER NOT NULL, triggerKind TEXT NOT NULL,
+                    leadValue INTEGER NOT NULL, isEnabled INTEGER NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_reminder_rules_assetId ON asset_reminder_rules (assetId)")
+                db.execSQL("CREATE UNIQUE INDEX index_asset_reminder_rules_sourceType_sourceId_triggerKind_leadValue ON asset_reminder_rules (sourceType, sourceId, triggerKind, leadValue)")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_notification_deliveries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ruleId INTEGER NOT NULL,
+                    occurrenceKey TEXT NOT NULL, deliveredAt INTEGER NOT NULL)""".trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX index_asset_notification_deliveries_ruleId_occurrenceKey ON asset_notification_deliveries (ruleId, occurrenceKey)")
             }
         }
     }

@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.spendwise.data.*
 import java.time.LocalDate
+import java.time.Duration
+import java.time.ZonedDateTime
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,12 +17,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 data class AssetCardUi(val asset: AssetEntity, val attention: String?, val secondary: String? = null)
-data class AssetsUiState(val cards: List<AssetCardUi> = emptyList(), val attentionCount: Int = 0)
+data class AssetAttentionUi(val assetName: String, val item: AssetAttentionItem)
+data class AssetsUiState(val cards: List<AssetCardUi> = emptyList(), val attentionCount: Int = 0,
+                         val topAttention: List<AssetAttentionUi> = emptyList())
 
 class AssetsViewModel(application: Application) : AndroidViewModel(application) {
     private val database = SpendWiseDatabase.getInstance(application)
@@ -39,7 +45,7 @@ class AssetsViewModel(application: Application) : AndroidViewModel(application) 
     val merchants = merchantRepository.merchants.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val commitments = commitmentRepository.data.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CommitmentData(emptyList(), emptyList()))
     val data = repository.data.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyAssetData())
-    val uiState = repository.data.combine(commitmentRepository.data) { assets, commitmentData -> buildAssetCards(assets, LocalDate.now(), commitmentData) }
+    val uiState = combine(repository.data, commitmentRepository.data, assetTodayFlow()) { assets, commitmentData, today -> buildAssetCards(assets, today, commitmentData) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssetsUiState())
 
     suspend fun loadForEdit(id: Long): AssetEditSnapshot? = repository.loadForEdit(id)
@@ -92,6 +98,9 @@ data class AssetDetailUiState(
     val warranties: List<AssetWarrantyEntity> = emptyList(),
     val rules: List<AssetMaintenanceRuleEntity> = emptyList(),
     val events: List<AssetMaintenanceEventEntity> = emptyList(),
+    val checkpoints: List<AssetCheckpointEntity> = emptyList(),
+    val checkpointEvents: List<AssetCheckpointEventEntity> = emptyList(),
+    val attention: List<AssetAttentionItem> = emptyList(),
     val documents: List<AssetDocumentEntity> = emptyList(),
     val linkedCommitments: List<Pair<AssetCommitmentLinkEntity, CommitmentWithMerchant>> = emptyList(),
     val dueByRule: Map<Long, MaintenanceDueResult> = emptyMap()
@@ -105,8 +114,9 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     val merchants = MerchantRepository(database.merchantDao()).merchants.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val categories = database.categoryDao().observeCategoriesForEntry().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val commitments = CommitmentRepository(database).data.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CommitmentData(emptyList(), emptyList()))
+    val reminderRules = database.assetReminderDao().observeRules().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val uiState = combine(repository.data, commitments) { data, commitmentData ->
+    val uiState = combine(repository.data, commitments, assetTodayFlow()) { data, commitmentData, today ->
         val asset = data.assets.firstOrNull { it.id == assetId }
         val events = data.events.filter { it.assetId == assetId }
         val rules = data.rules.filter { it.assetId == assetId }
@@ -116,23 +126,42 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
             warranties = data.warranties.filter { it.assetId == assetId },
             rules = rules,
             events = events,
+            checkpoints = data.checkpoints.filter { it.assetId == assetId },
+            checkpointEvents = data.checkpointEvents.filter { event -> data.checkpoints.any { it.id == event.checkpointId && it.assetId == assetId } },
+            attention = AssetAttentionEngine.evaluate(data, today, assetId),
             documents = data.documents.filter { it.assetId == assetId },
             linkedCommitments = data.commitmentLinks.filter { it.assetId == assetId }.mapNotNull { link ->
                 commitmentData.commitments.firstOrNull { it.commitment.id == link.commitmentId }?.let { link to it }
             },
             dueByRule = rules.associate { rule ->
                 val latest = events.filter { it.maintenanceRuleId == rule.id }.maxByOrNull { it.performedDateEpochDay }
-                rule.id to MaintenanceDueCalculator.calculate(rule, LocalDate.now(), asset?.currentMileageKm, latest)
+                rule.id to MaintenanceDueCalculator.calculate(rule, today, asset?.currentMileageKm, latest)
             }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssetDetailUiState())
 
     fun updateMileage(mileage: Long, result: (Boolean) -> Unit) = viewModelScope.launch {
         val asset = uiState.value.asset ?: return@launch
-        result(repository.updateMileage(asset, mileage))
+        val accepted = repository.updateMileage(asset, mileage)
+        result(accepted)
+        if (accepted) runCatching { AssetReminderCoordinator(getApplication()).evaluate(AssetReminderEvaluation.MILEAGE, assetId) }
     }
     fun addWarranty(warranty: AssetWarrantyEntity) = viewModelScope.launch { repository.addWarranty(warranty.copy(assetId = assetId)) }
     fun addRule(rule: AssetMaintenanceRuleEntity) = viewModelScope.launch { repository.addRule(rule.copy(assetId = assetId)) }
+    fun saveCheckpoint(checkpoint: AssetCheckpointEntity, done: () -> Unit) = viewModelScope.launch {
+        repository.saveCheckpoint(checkpoint.copy(assetId = assetId))
+        done()
+    }
+    fun completeCheckpoint(id: Long, date: LocalDate, mileageKm: Long?, note: String?, done: () -> Unit) = viewModelScope.launch {
+        repository.completeCheckpoint(id, date, mileageKm, note)
+        done()
+    }
+    fun configureReminderRules(source: AssetAttentionSource, sourceId: Long,
+                               available: Set<Pair<AssetReminderTriggerKind, Long>>,
+                               enabled: Set<Pair<AssetReminderTriggerKind, Long>>, done: () -> Unit) = viewModelScope.launch {
+        repository.configureReminderRules(assetId, source, sourceId, available, enabled)
+        done()
+    }
     fun linkCommitment(id: Long, type: AssetCommitmentRelationType) = viewModelScope.launch { repository.linkCommitment(assetId, id, type) }
     fun recordMaintenance(input: MaintenanceEventInput, saved: () -> Unit) = viewModelScope.launch { repository.recordMaintenance(input.copy(assetId = assetId)); saved() }
     fun attachDocument(uri: Uri, type: AssetDocumentType, title: String, result: (Boolean) -> Unit) = viewModelScope.launch {
@@ -147,27 +176,28 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     fun archive(done: () -> Unit) = viewModelScope.launch { repository.archive(assetId); done() }
 }
 
-private fun emptyAssetData() = AssetData(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+private fun emptyAssetData() = AssetData(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+private fun assetTodayFlow() = flow {
+    while (true) {
+        emit(LocalDate.now())
+        val now = ZonedDateTime.now()
+        val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
+        delay(Duration.between(now, nextMidnight).toMillis().coerceAtLeast(1_000L))
+    }
+}
 
 private fun buildAssetCards(data: AssetData, today: LocalDate, commitments: CommitmentData? = null): AssetsUiState {
+    val attention = AssetAttentionEngine.evaluate(data, today)
     val cards = data.assets.map { asset ->
-        val warrantyAttention = data.warranties.filter { it.assetId == asset.id }.mapNotNull { warranty ->
-            val status = WarrantyCalculator.status(LocalDate.ofEpochDay(warranty.endDateEpochDay), today)
-            if (status.state == WarrantyState.ACTIVE) null else WarrantyCalculator.remainingLabel(LocalDate.ofEpochDay(warranty.endDateEpochDay), today)
-        }.firstOrNull()
-        val events = data.events.filter { it.assetId == asset.id }
-        val maintenance = data.rules.filter { it.assetId == asset.id }.mapNotNull { rule ->
-            val latest = events.filter { it.maintenanceRuleId == rule.id }.maxByOrNull { it.performedDateEpochDay }
-            val due = MaintenanceDueCalculator.calculate(rule, today, asset.currentMileageKm, latest)
-            if (due.status == MaintenanceDueStatus.OK) null else when (due.triggerReason) {
-                MaintenanceTriggerReason.MILEAGE -> "${rule.title}: ${due.remainingKm?.let { if (it < 0) "overdue by ${-it} km" else "due in $it km" }}"
-                else -> "${rule.title}: ${due.remainingDays?.let { if (it < 0) "overdue by ${-it} days" else "due in $it days" }}"
-            }
-        }.firstOrNull()
+        val mostImportant = attention.firstOrNull { it.assetId == asset.id && it.status != AssetAttentionStatus.UPCOMING }
         val financing = data.commitmentLinks.firstOrNull { it.assetId == asset.id && it.relationType == AssetCommitmentRelationType.FINANCING }
             ?.let { link -> commitments?.commitments?.firstOrNull { it.commitment.id == link.commitmentId } }
             ?.let { "Financing: ${formatEgp(it.commitment.amountMinor)} · ${LocalDate.ofEpochDay(it.commitment.nextDueDateEpochDay)}" }
-        AssetCardUi(asset, maintenance ?: warrantyAttention, financing)
+        AssetCardUi(asset, mostImportant?.message, financing)
     }
-    return AssetsUiState(cards, cards.count { it.attention != null })
+    return AssetsUiState(cards, cards.count { it.attention != null },
+        attention.filter { it.status != AssetAttentionStatus.UPCOMING }.take(3).mapNotNull { item ->
+            data.assets.firstOrNull { it.id == item.assetId }?.let { AssetAttentionUi(it.name, item) }
+        })
 }

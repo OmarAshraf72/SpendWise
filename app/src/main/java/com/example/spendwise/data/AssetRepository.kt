@@ -18,7 +18,9 @@ data class AssetData(
     val events: List<AssetMaintenanceEventEntity>,
     val documents: List<AssetDocumentEntity>,
     val commitmentLinks: List<AssetCommitmentLinkEntity>,
-    val transactionLinks: List<AssetTransactionLinkEntity>
+    val transactionLinks: List<AssetTransactionLinkEntity>,
+    val checkpoints: List<AssetCheckpointEntity>,
+    val checkpointEvents: List<AssetCheckpointEventEntity>
 )
 
 data class NewAssetInput(
@@ -77,16 +79,19 @@ data class MaintenanceEventInput(
 
 class AssetRepository(private val database: SpendWiseDatabase) {
     private val dao = database.assetDao()
+    private val reminderDao = database.assetReminderDao()
     val data = combine(
         dao.observeActiveAssets(), dao.observeIdentifiers(), dao.observeWarranties(), dao.observeMaintenanceRules(),
-        dao.observeMaintenanceEvents(), dao.observeDocuments(), dao.observeCommitmentLinks(), dao.observeTransactionLinks()
+        dao.observeMaintenanceEvents(), dao.observeDocuments(), dao.observeCommitmentLinks(), dao.observeTransactionLinks(),
+        dao.observeCheckpoints(), dao.observeCheckpointEvents()
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         AssetData(
             values[0] as List<AssetEntity>, values[1] as List<AssetIdentifierEntity>,
             values[2] as List<AssetWarrantyEntity>, values[3] as List<AssetMaintenanceRuleEntity>,
             values[4] as List<AssetMaintenanceEventEntity>, values[5] as List<AssetDocumentEntity>,
-            values[6] as List<AssetCommitmentLinkEntity>, values[7] as List<AssetTransactionLinkEntity>
+            values[6] as List<AssetCommitmentLinkEntity>, values[7] as List<AssetTransactionLinkEntity>,
+            values[8] as List<AssetCheckpointEntity>, values[9] as List<AssetCheckpointEventEntity>
         )
     }
 
@@ -145,12 +150,87 @@ class AssetRepository(private val database: SpendWiseDatabase) {
 
     suspend fun addWarranty(warranty: AssetWarrantyEntity) = dao.insertWarranty(warranty)
     suspend fun addRule(rule: AssetMaintenanceRuleEntity) = dao.insertRule(rule)
+    suspend fun saveCheckpoint(checkpoint: AssetCheckpointEntity): Long = database.withTransaction {
+        AssetAttentionEngine.validateCheckpoint(checkpoint)
+        require(dao.getAsset(checkpoint.assetId)?.isArchived == false)
+        if (checkpoint.id == 0L) dao.insertCheckpoint(checkpoint.copy(title = checkpoint.title.trim())) else {
+            val previous = requireNotNull(dao.getCheckpoint(checkpoint.id))
+            require(previous.assetId == checkpoint.assetId)
+            val current = AssetAttentionEngine.checkpointOccurrence(previous, dao.latestCheckpointEvent(previous.id))
+            val updated = if (checkpoint.triggerMode != previous.triggerMode) checkpoint.copy(
+                title = checkpoint.title.trim(), rescheduledDueDateEpochDay = null,
+                rescheduledDueMileageKm = null
+            ) else checkpoint.copy(
+                title = checkpoint.title.trim(),
+                dueDateEpochDay = previous.dueDateEpochDay,
+                dueMileageKm = previous.dueMileageKm,
+                rescheduledDueDateEpochDay = checkpoint.dueDateEpochDay.takeIf { it != current.dueDateEpochDay }
+                    ?: previous.rescheduledDueDateEpochDay,
+                rescheduledDueMileageKm = checkpoint.dueMileageKm.takeIf { it != current.dueMileageKm }
+                    ?: previous.rescheduledDueMileageKm
+            )
+            dao.updateCheckpoint(updated)
+            val existingRules = reminderDao.rulesForSource(AssetAttentionSource.CHECKPOINT, checkpoint.id)
+            if (existingRules.isNotEmpty()) {
+                suspend fun syncWarning(kind: AssetReminderTriggerKind, old: Long?, new: Long?) {
+                    if (old == new) return
+                    old?.let { reminderDao.setRuleEnabled(AssetAttentionSource.CHECKPOINT, checkpoint.id, kind, it, false) }
+                    new?.takeIf { it > 0 }?.let { lead ->
+                        reminderDao.insertRule(AssetReminderRuleEntity(assetId = checkpoint.assetId,
+                            sourceType = AssetAttentionSource.CHECKPOINT, sourceId = checkpoint.id,
+                            triggerKind = kind, leadValue = lead))
+                        reminderDao.setRuleEnabled(AssetAttentionSource.CHECKPOINT, checkpoint.id, kind, lead, true)
+                    }
+                }
+                syncWarning(AssetReminderTriggerKind.DAYS_BEFORE,
+                    previous.warningDays?.toLong().takeIf { previous.triggerMode != CheckpointTriggerMode.MILEAGE },
+                    checkpoint.warningDays?.toLong().takeIf { checkpoint.triggerMode != CheckpointTriggerMode.MILEAGE })
+                syncWarning(AssetReminderTriggerKind.KM_BEFORE,
+                    previous.warningKm.takeIf { previous.triggerMode != CheckpointTriggerMode.DATE },
+                    checkpoint.warningKm.takeIf { checkpoint.triggerMode != CheckpointTriggerMode.DATE })
+            }
+            checkpoint.id
+        }
+    }
+
+    suspend fun completeCheckpoint(id: Long, date: LocalDate, mileageKm: Long?, note: String?): Long = database.withTransaction {
+        val checkpoint = requireNotNull(dao.getCheckpoint(id))
+        require(checkpoint.isActive)
+        if (checkpoint.repeatKm != null) require(mileageKm != null && mileageKm >= 0)
+        val due = AssetAttentionEngine.checkpointOccurrence(checkpoint, dao.latestCheckpointEvent(id))
+        val eventId = dao.insertCheckpointEvent(AssetCheckpointEventEntity(
+            checkpointId = id, completedDateEpochDay = date.toEpochDay(), completedMileageKm = mileageKm,
+            note = note?.trim()?.takeIf(String::isNotBlank), createdAt = System.currentTimeMillis(),
+            dueDateEpochDay = due.dueDateEpochDay, dueMileageKm = due.dueMileageKm
+        ))
+        dao.updateCheckpoint(checkpoint.copy(
+            isActive = checkpoint.repeatMonths != null || checkpoint.repeatKm != null,
+            rescheduledDueDateEpochDay = null, rescheduledDueMileageKm = null,
+            updatedAt = System.currentTimeMillis()
+        ))
+        eventId
+    }
+
+    suspend fun configureReminderRules(
+        assetId: Long, source: AssetAttentionSource, sourceId: Long,
+        available: Set<Pair<AssetReminderTriggerKind, Long>>,
+        enabled: Set<Pair<AssetReminderTriggerKind, Long>>
+    ) = database.withTransaction {
+        require(enabled.all { it in available })
+        val existing = reminderDao.rulesForSource(source, sourceId)
+        existing.forEach { reminderDao.setRuleEnabled(source, sourceId, it.triggerKind, it.leadValue,
+            (it.triggerKind to it.leadValue) in enabled) }
+        available.filterNot { option -> existing.any { it.triggerKind == option.first && it.leadValue == option.second } }
+            .forEach { (kind, lead) -> reminderDao.insertRule(AssetReminderRuleEntity(
+                assetId = assetId, sourceType = source, sourceId = sourceId,
+                triggerKind = kind, leadValue = lead, isEnabled = (kind to lead) in enabled
+            )) }
+    }
     suspend fun linkCommitment(assetId: Long, commitmentId: Long, type: AssetCommitmentRelationType) =
         dao.linkCommitment(AssetCommitmentLinkEntity(assetId, commitmentId, type))
 
     suspend fun updateMileage(asset: AssetEntity, mileage: Long): Boolean {
-        require(mileage >= 0)
-        if (asset.currentMileageKm != null && mileage < asset.currentMileageKm) return false
+        if (!canUpdateAssetMileage(asset.currentMileageKm, mileage)) return false
         dao.updateMileage(asset.id, mileage, System.currentTimeMillis())
         return true
     }

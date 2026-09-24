@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
@@ -151,29 +152,26 @@ fun AddCommitmentScreen(
             DateField("Debt start date", LocalDate.ofEpochDay(debtStartEpoch)) { picker = "debtStart" }
             Text("Repayment style", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             RepaymentMode.entries.forEach { option ->
-                Row(Modifier.fillMaxWidth().clickable {
-                    if (repaymentMode != option) {
-                        amount = ""
-                        frequency = CommitmentFrequency.MONTHLY
-                        dueDateEpoch = LocalDate.now().plusDays(1).toEpochDay()
-                        fixedDueConfirmed = option == RepaymentMode.OPEN_ENDED
-                        hasEndDate = false
-                        debtExpectedEndEpoch = null
-                    }
-                    repaymentMode = option
-                }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    RadioButton(selected = repaymentMode == option, onClick = {
-                        if (repaymentMode != option) {
-                            amount = ""
-                            frequency = CommitmentFrequency.MONTHLY
-                            dueDateEpoch = LocalDate.now().plusDays(1).toEpochDay()
-                            fixedDueConfirmed = option == RepaymentMode.OPEN_ENDED
-                            hasEndDate = false
-                            debtExpectedEndEpoch = null
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .clickable {
+                            if (repaymentMode != option) {
+                                amount = ""
+                                frequency = CommitmentFrequency.MONTHLY
+                                dueDateEpoch = LocalDate.now().plusDays(1).toEpochDay()
+                                fixedDueConfirmed = option == RepaymentMode.OPEN_ENDED
+                                hasEndDate = false
+                                debtExpectedEndEpoch = null
+                            }
+                            repaymentMode = option
                         }
-                        repaymentMode = option
-                    })
-                    Text(option.displayName(), modifier = Modifier.padding(start = 8.dp))
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = repaymentMode == option, onClick = null)
+                    Text(option.displayName(), modifier = Modifier.padding(start = 12.dp))
                 }
             }
             if (showValidation && repaymentMode == null) Text("Choose a repayment style.", color = MaterialTheme.colorScheme.error)
@@ -280,7 +278,17 @@ fun AddCommitmentScreen(
 @Composable private fun SectionLabel(text: String) = Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
 
 @Composable private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, modifier = Modifier.padding(top = 12.dp).weight(1f)); Switch(checked, onChange) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable { onChange(!checked) },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, modifier = Modifier.weight(1f))
+        Switch(checked, onCheckedChange = null)
+    }
 }
 
 @Composable private fun MoneyField(label: String, value: String, onChange: (String) -> Unit, error: Boolean = false) {

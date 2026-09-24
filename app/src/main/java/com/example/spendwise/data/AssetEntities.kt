@@ -32,7 +32,8 @@ data class AssetEntity(
     val notes: String?,
     val isArchived: Boolean = false,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val mileageUpdatedAt: Long? = null
 )
 
 @Entity(

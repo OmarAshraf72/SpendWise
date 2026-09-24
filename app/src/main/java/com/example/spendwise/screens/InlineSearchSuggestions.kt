@@ -3,10 +3,7 @@ package com.example.spendwise.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,8 +29,8 @@ fun <T> InlineSuggestionList(
         shape = MaterialTheme.shapes.medium,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
-            items(suggestions, key = { it.key }) { suggestion ->
+        Column(Modifier.fillMaxWidth()) {
+            suggestions.forEach { suggestion ->
                 Column(Modifier.fillMaxWidth().clickable { onSelected(suggestion.value) }
                     .padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Text(suggestion.primary)
@@ -42,11 +39,9 @@ fun <T> InlineSuggestionList(
                 HorizontalDivider()
             }
             if (addLabel != null && onAdd != null) {
-                item("add-action") {
-                    Text(addLabel, color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxWidth().clickable(onClick = onAdd)
-                            .padding(horizontal = 16.dp, vertical = 14.dp))
-                }
+                Text(addLabel, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onAdd)
+                        .padding(horizontal = 16.dp, vertical = 14.dp))
             }
         }
     }

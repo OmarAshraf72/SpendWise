@@ -80,7 +80,7 @@ private fun AssetsAttentionCard(state: com.example.spendwise.viewmodel.AssetsUiS
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Assets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("${state.attentionCount} thing${if (state.attentionCount == 1) "" else "s"} need attention")
-            state.cards.firstOrNull { it.attention != null }?.let { Text("${it.asset.name}: ${it.attention}") }
+            state.topAttention.forEach { Text("${it.assetName}: ${it.item.message}") }
             TextButton(onClick = onAssets) { Text("View assets") }
         }
     }
