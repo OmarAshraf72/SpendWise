@@ -2,9 +2,19 @@ package com.example.spendwise.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -21,9 +31,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.spendwise.FeatureFlags
 import com.example.spendwise.navigation.MainDestination
-import com.example.spendwise.navigation.isMainDestinationSelected
+import com.example.spendwise.navigation.NavigationViewModel
 import com.example.spendwise.screens.AnalyticsScreen
 import com.example.spendwise.screens.AddExpenseScreen
 import com.example.spendwise.screens.AddIncomeScreen
@@ -35,6 +46,7 @@ import com.example.spendwise.screens.ReceiptCaptureScreen
 import com.example.spendwise.screens.ReceiptReviewScreen
 import com.example.spendwise.screens.SettingsScreen
 import com.example.spendwise.screens.MoreScreen
+import com.example.spendwise.screens.NavigationCustomizationScreen
 import com.example.spendwise.screens.DebtDetailScreen
 import com.example.spendwise.screens.TransactionsScreen
 import com.example.spendwise.screens.MyAssetsScreen
@@ -46,6 +58,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SpendWiseApp() {
     val navController = rememberNavController()
+    val navigationViewModel: NavigationViewModel = viewModel()
+    val navigationConfiguration by navigationViewModel.configuration.collectAsStateWithLifecycle()
     val receiptViewModel: ReceiptViewModel? = if (FeatureFlags.ENABLE_RECEIPT_SCAN) viewModel() else null
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -58,38 +72,46 @@ fun SpendWiseApp() {
     val editCommitmentRoute = "edit_commitment/{commitmentId}"
     val receiptCaptureRoute = "receipt_capture"
     val receiptReviewRoute = "receipt_review"
-    val categoriesRoute = "categories"
-    val settingsRoute = "settings"
+    val categoriesRoute = MainDestination.Categories.route
+    val settingsRoute = MainDestination.Settings.route
+    val customizeRoute = "customize_navigation"
     val debtDetailRoute = "debt_detail/{debtProfileId}"
-    val assetsRoute = "assets"
+    val assetsRoute = MainDestination.Assets.route
     val addAssetRoute = "add_asset"
     val assetDetailRoute = "asset/{assetId}"
     val editAssetRoute = "edit_asset/{assetId}"
-    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, editAssetRoute, assetDetailRoute, receiptCaptureRoute, receiptReviewRoute)
+    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, editAssetRoute, assetDetailRoute, receiptCaptureRoute, receiptReviewRoute, settingsRoute, customizeRoute)
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            if (currentRoute !in fullScreenRoutes) {
-                NavigationBar {
-                    MainDestination.entries.forEach { destination ->
-                        NavigationBarItem(
-                            selected = isMainDestinationSelected(destination, currentRoute),
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Text(destination.symbol) },
-                            label = { Text(destination.title) }
-                        )
+        topBar = {
+            if (currentRoute in MainDestination.configurable.map(MainDestination::route)) {
+                Row(Modifier.fillMaxWidth().statusBarsPadding(), horizontalArrangement = Arrangement.End) {
+                    if (currentRoute != MainDestination.More.route) IconButton(onClick = {
+                        navController.navigate(MainDestination.More.route) { launchSingleTop = true }
+                    }) { Icon(Icons.Outlined.MoreVert, contentDescription = "More") }
+                    IconButton(onClick = { navController.navigate(settingsRoute) { launchSingleTop = true } }) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "Settings")
                     }
                 }
+            }
+        },
+        bottomBar = {
+            if (currentRoute !in fullScreenRoutes && !imeVisible) {
+                FloatingNavigationBar(
+                    destinations = navigationConfiguration.pinnedDestinations,
+                    currentRoute = currentRoute,
+                    onDestination = { destination ->
+                        navController.navigate(destination.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onReorderPinned = navigationViewModel::savePinnedOrder
+                )
             }
         }
     ) { innerPadding ->
@@ -103,8 +125,7 @@ fun SpendWiseApp() {
                     onAddExpense = { navController.navigate(addExpenseRoute) },
                     onAddIncome = { navController.navigate(addIncomeRoute) },
                     onCommitments = { navController.navigate(MainDestination.Commitments.route) },
-                    onAssets = { navController.navigate(assetsRoute) },
-                    onSettings = { navController.navigate(settingsRoute) { launchSingleTop = true } }
+                    onAssets = { navController.navigate(assetsRoute) }
                 )
             }
             composable(MainDestination.Transactions.route) {
@@ -119,7 +140,12 @@ fun SpendWiseApp() {
                 )
             }
             composable(MainDestination.More.route) {
-                MoreScreen(onAssets = { navController.navigate(assetsRoute) }, onCategories = { navController.navigate(categoriesRoute) })
+                MoreScreen(
+                    secondaryDestinations = navigationConfiguration.secondaryDestinations,
+                    onOpen = { navController.navigate(it.route) { launchSingleTop = true } },
+                    onCustomize = { navController.navigate(customizeRoute) },
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(assetsRoute) { MyAssetsScreen(onAdd = { navController.navigate(addAssetRoute) }, onOpen = { navController.navigate("asset/$it") }) }
             composable(addAssetRoute) { AddAssetScreen(onSaved = { id -> navController.navigate("asset/$id") { popUpTo(addAssetRoute) { inclusive = true } } }, onCancel = { navController.popBackStack() }) }
@@ -130,7 +156,22 @@ fun SpendWiseApp() {
                 AssetDetailScreen(onBack = { navController.popBackStack() }, onEdit = { navController.navigate("edit_asset/$it") }, onCommitment = { navController.navigate(MainDestination.Commitments.route) })
             }
             composable(categoriesRoute) { CategoriesScreen() }
-            composable(settingsRoute) { SettingsScreen(onBack = { navController.popBackStack() }) }
+            composable(settingsRoute) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigation = { navController.navigate(customizeRoute) },
+                    onMore = { navController.navigate(MainDestination.More.route) }
+                )
+            }
+            composable(customizeRoute) {
+                NavigationCustomizationScreen(
+                    configuration = navigationConfiguration,
+                    onBack = { navController.popBackStack() },
+                    onSaveOrder = { navigationViewModel.saveOrder(it) },
+                    onSetPinned = { id, pinned -> navigationViewModel.setPinned(id, pinned) },
+                    onReset = { navigationViewModel.reset() }
+                )
+            }
             composable(
                 debtDetailRoute,
                 arguments = listOf(navArgument("debtProfileId") { type = NavType.LongType })

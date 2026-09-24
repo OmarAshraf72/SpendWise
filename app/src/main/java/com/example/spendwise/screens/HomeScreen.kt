@@ -15,10 +15,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -39,7 +35,6 @@ fun HomeScreen(
     onAddIncome: () -> Unit,
     onCommitments: () -> Unit,
     onAssets: () -> Unit,
-    onSettings: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
     commitmentsViewModel: CommitmentsViewModel = viewModel(),
     assetsViewModel: AssetsViewModel = viewModel()
@@ -67,9 +62,6 @@ fun HomeScreen(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            IconButton(onClick = onSettings) {
-                Icon(Icons.Outlined.Settings, contentDescription = "Settings")
             }
         }
 
