@@ -244,7 +244,8 @@ fun AddAssetScreen(assetId: Long? = null, onSaved: (Long) -> Unit, onCancel: () 
 }
 
 @Composable
-fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: (Long) -> Unit, viewModel: AssetDetailViewModel = viewModel()) {
+fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: (Long) -> Unit,
+                      onMaintenance: (Long, Boolean, Long?) -> Unit, viewModel: AssetDetailViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle(); val categories by viewModel.categories.collectAsStateWithLifecycle(); val commitments by viewModel.commitments.collectAsStateWithLifecycle(); val merchants by viewModel.merchants.collectAsStateWithLifecycle()
     val reminderRules by viewModel.reminderRules.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -272,7 +273,24 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
         item { DetailSection("Purchase") { Text(asset.purchaseDateEpochDay?.let { LocalDate.ofEpochDay(it).format(assetDateFormatter) } ?: "No purchase date"); asset.purchasePriceMinor?.let { Text(formatEgp(it)) }; asset.sellerMerchantId?.let { id -> merchants.firstOrNull { it.id == id }?.let { Text("Seller: ${it.displayName}") } } } }
         item { DetailSection("Warranty") { if (state.warranties.isEmpty()) Text("No warranties") else state.warranties.forEach { warranty -> Text("${warranty.name}: ${WarrantyCalculator.remainingLabel(LocalDate.ofEpochDay(warranty.endDateEpochDay), LocalDate.now())}"); state.attention.firstOrNull { it.sourceType == AssetAttentionSource.WARRANTY && it.sourceId == warranty.id }?.let { item -> TextButton(onClick = { reminderTarget = item }) { Text("Reminders") } } }; TextButton(onClick = { dialog = "warranty" }) { Text("Add warranty") } } }
         item { DetailSection("Financing") { if (state.linkedCommitments.isEmpty()) Text("No linked commitments") else state.linkedCommitments.forEach { (link, commitment) -> TextButton(onClick = { onCommitment(commitment.commitment.id) }) { Text("${link.relationType.label()}: ${commitment.commitment.title} · ${formatEgp(commitment.commitment.amountMinor)}") } }; TextButton(onClick = { dialog = "link" }) { Text("Link commitment") } } }
-        item { DetailSection("Maintenance") { if (state.rules.isEmpty()) Text("No maintenance schedules") else state.rules.forEach { rule -> Text("${rule.title}: ${state.dueByRule[rule.id]?.dueLabel()}"); state.attention.firstOrNull { it.sourceType == AssetAttentionSource.MAINTENANCE && it.sourceId == rule.id }?.let { item -> TextButton(onClick = { reminderTarget = item }) { Text("Reminders") } } }; FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { TextButton(onClick = { dialog = "rule" }) { Text("Add schedule", maxLines = 1) }; TextButton(onClick = { dialog = "event" }) { Text("Record maintenance", maxLines = 1) } } } }
+        item { DetailSection("Maintenance") {
+            val relevant = state.rules.maxWithOrNull(compareBy<AssetMaintenanceRuleEntity> { state.dueByRule[it.id]?.status?.ordinal ?: -1 }
+                .thenBy { -(state.dueByRule[it.id]?.remainingDays ?: Long.MAX_VALUE) })
+            if (relevant == null) Text("No maintenance plan") else {
+                Text(relevant.title, fontWeight = FontWeight.SemiBold)
+                state.dueByRule[relevant.id]?.let { due ->
+                    Text(due.dueLabel())
+                    Text(due.status.name.replace('_', ' '), color = if (due.status == MaintenanceDueStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                state.attention.firstOrNull { it.sourceType == AssetAttentionSource.MAINTENANCE && it.sourceId == relevant.id }?.let { item ->
+                    TextButton(onClick = { reminderTarget = item }) { Text("Reminders") }
+                }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (relevant != null) TextButton(onClick = { onMaintenance(asset.id, true, relevant.id) }) { Text("Complete maintenance", maxLines = 1) }
+                TextButton(onClick = { onMaintenance(asset.id, false, null) }) { Text(if (relevant == null) "Add maintenance" else "View maintenance", maxLines = 1) }
+            }
+        } }
         item { DetailSection("Checkpoints") {
             if (state.checkpoints.isEmpty()) Text("No checkpoints yet")
             state.checkpoints.forEach { checkpoint ->
@@ -294,15 +312,12 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
         } }
         item { DetailSection("Documents") { if (state.documents.isEmpty()) Text("No documents") else state.documents.forEach { doc -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(doc.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(doc.originalFileName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }; TextButton(onClick = {
             val file = viewModel.documentFile(doc.storedRelativePath); if (file == null) message = "Stored file is missing" else runCatching { val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file); context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, doc.mimeType).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }.onFailure { message = "No app can open this document" }
-        }) { Text("View") }; TextButton(onClick = { pendingRename = doc }) { Text("Rename") }; TextButton(onClick = { pendingDelete = doc }) { Text("Delete") } } }; TextButton(onClick = { documentPicker.launch(arrayOf("image/*", "application/pdf")) }) { Text("Attach document") } } }
-        item { DetailSection("History") { if (state.events.isEmpty()) Text("No maintenance history") else state.events.forEach { Text("${it.title} · ${LocalDate.ofEpochDay(it.performedDateEpochDay).format(assetDateFormatter)}${it.costMinor?.let { cost -> " · ${formatEgp(cost)}" }.orEmpty()}") } } }
+        }) { Text("View") }; TextButton(onClick = { pendingRename = doc }) { Text("Rename") }; if (doc.id !in state.maintenanceDocumentIds) TextButton(onClick = { pendingDelete = doc }) { Text("Delete") } } }; TextButton(onClick = { documentPicker.launch(arrayOf("image/*", "application/pdf")) }) { Text("Attach document") } } }
         item { TextButton(onClick = { dialog = "archive" }, Modifier.fillMaxWidth()) { Text("Archive asset", color = MaterialTheme.colorScheme.error) }; Spacer(Modifier.height(16.dp)) }
     }
     when (dialog) {
         "mileage" -> MileageDialog(asset.currentMileageKm, { dialog = null }) { viewModel.updateMileage(it) { accepted -> message = if (accepted) "Mileage updated" else "New mileage is lower than current mileage" }; dialog = null }
         "warranty" -> WarrantyDialog(asset.id, asset.purchaseDateEpochDay, { dialog = null }) { viewModel.addWarranty(it); dialog = null }
-        "rule" -> RuleDialog(asset, { dialog = null }) { viewModel.addRule(it); dialog = null }
-        "event" -> MaintenanceDialog(asset, state.rules, categories, merchants, { dialog = null }) { viewModel.recordMaintenance(it) { message = "Maintenance recorded"; dialog = null } }
         "checkpoint" -> AssetCheckpointDialog(asset, editingCheckpoint,
             editingCheckpoint?.let { checkpoint ->
                 AssetAttentionEngine.checkpointOccurrence(checkpoint, state.checkpointEvents

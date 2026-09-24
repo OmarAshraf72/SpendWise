@@ -53,6 +53,7 @@ import com.example.spendwise.screens.TransactionsScreen
 import com.example.spendwise.screens.MyAssetsScreen
 import com.example.spendwise.screens.AddAssetScreen
 import com.example.spendwise.screens.AssetDetailScreen
+import com.example.spendwise.screens.AssetMaintenanceScreen
 import com.example.spendwise.viewmodel.ReceiptViewModel
 import kotlinx.coroutines.launch
 
@@ -85,8 +86,9 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
     val assetsRoute = MainDestination.Assets.route
     val addAssetRoute = "add_asset"
     val assetDetailRoute = "asset/{assetId}"
+    val assetMaintenanceRoute = "asset/{assetId}/maintenance?complete={complete}&ruleId={ruleId}"
     val editAssetRoute = "edit_asset/{assetId}"
-    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, editAssetRoute, assetDetailRoute, receiptCaptureRoute, receiptReviewRoute, settingsRoute, customizeRoute)
+    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, editAssetRoute, assetDetailRoute, assetMaintenanceRoute, receiptCaptureRoute, receiptReviewRoute, settingsRoute, customizeRoute)
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     Scaffold(
@@ -159,7 +161,15 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
                 AddAssetScreen(assetId = entry.arguments?.getLong("assetId"), onSaved = { navController.popBackStack() }, onCancel = { navController.popBackStack() })
             }
             composable(assetDetailRoute, arguments = listOf(navArgument("assetId") { type = NavType.LongType })) {
-                AssetDetailScreen(onBack = { navController.popBackStack() }, onEdit = { navController.navigate("edit_asset/$it") }, onCommitment = { navController.navigate(MainDestination.Commitments.route) })
+                AssetDetailScreen(onBack = { navController.popBackStack() }, onEdit = { navController.navigate("edit_asset/$it") }, onCommitment = { navController.navigate(MainDestination.Commitments.route) },
+                    onMaintenance = { id, complete, ruleId -> navController.navigate("asset/$id/maintenance?complete=$complete&ruleId=${ruleId ?: 0}") })
+            }
+            composable(assetMaintenanceRoute, arguments = listOf(
+                navArgument("assetId") { type = NavType.LongType }, navArgument("complete") { type = NavType.BoolType; defaultValue = false },
+                navArgument("ruleId") { type = NavType.LongType; defaultValue = 0L }
+            )) { entry ->
+                AssetMaintenanceScreen(onBack = { navController.popBackStack() }, openCompletion = entry.arguments?.getBoolean("complete") == true,
+                    initialRuleId = entry.arguments?.getLong("ruleId")?.takeIf { it > 0 })
             }
             composable(categoriesRoute) { CategoriesScreen() }
             composable(settingsRoute) {

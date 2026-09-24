@@ -31,6 +31,8 @@ interface AssetDao {
 
     @Query("SELECT * FROM asset_maintenance_rules WHERE isActive = 1 ORDER BY id")
     fun observeMaintenanceRules(): Flow<List<AssetMaintenanceRuleEntity>>
+    @Query("SELECT * FROM asset_maintenance_rules ORDER BY id")
+    fun observeAllMaintenanceRules(): Flow<List<AssetMaintenanceRuleEntity>>
 
     @Query("SELECT * FROM asset_maintenance_events ORDER BY performedDateEpochDay DESC, createdAt DESC")
     fun observeMaintenanceEvents(): Flow<List<AssetMaintenanceEventEntity>>
@@ -53,6 +55,10 @@ interface AssetDao {
 
     @Query("SELECT * FROM asset_documents ORDER BY createdAt DESC")
     fun observeDocuments(): Flow<List<AssetDocumentEntity>>
+    @Query("SELECT * FROM asset_maintenance_document_links")
+    fun observeMaintenanceDocumentLinks(): Flow<List<AssetMaintenanceDocumentLinkEntity>>
+    @Query("SELECT COUNT(*) FROM asset_maintenance_document_links WHERE assetDocumentId = :documentId")
+    suspend fun maintenanceLinkCount(documentId: Long): Int
 
     @Query("SELECT * FROM asset_commitment_links")
     fun observeCommitmentLinks(): Flow<List<AssetCommitmentLinkEntity>>
@@ -68,10 +74,14 @@ interface AssetDao {
     @Insert suspend fun insertWarranty(item: AssetWarrantyEntity): Long
     @Update suspend fun updateWarranty(item: AssetWarrantyEntity)
     @Insert suspend fun insertRule(item: AssetMaintenanceRuleEntity): Long
+    @Update suspend fun updateRule(item: AssetMaintenanceRuleEntity)
+    @Query("SELECT * FROM asset_maintenance_rules WHERE id = :id LIMIT 1")
+    suspend fun getRule(id: Long): AssetMaintenanceRuleEntity?
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertEvent(item: AssetMaintenanceEventEntity): Long
     @Query("SELECT * FROM asset_maintenance_events WHERE idempotencyKey = :key LIMIT 1")
     suspend fun eventByKey(key: String): AssetMaintenanceEventEntity?
     @Insert suspend fun insertDocument(item: AssetDocumentEntity): Long
+    @Insert suspend fun linkMaintenanceDocument(item: AssetMaintenanceDocumentLinkEntity)
     @Query("SELECT * FROM asset_documents WHERE id = :id LIMIT 1") suspend fun getDocument(id: Long): AssetDocumentEntity?
     @Query("DELETE FROM asset_documents WHERE id = :id") suspend fun deleteDocument(id: Long)
     @Query("UPDATE asset_documents SET title = :title WHERE id = :id") suspend fun renameDocument(id: Long, title: String)

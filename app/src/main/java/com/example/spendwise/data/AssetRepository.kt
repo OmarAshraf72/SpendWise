@@ -20,7 +20,8 @@ data class AssetData(
     val commitmentLinks: List<AssetCommitmentLinkEntity>,
     val transactionLinks: List<AssetTransactionLinkEntity>,
     val checkpoints: List<AssetCheckpointEntity>,
-    val checkpointEvents: List<AssetCheckpointEventEntity>
+    val checkpointEvents: List<AssetCheckpointEventEntity>,
+    val maintenanceDocumentLinks: List<AssetMaintenanceDocumentLinkEntity> = emptyList()
 )
 
 data class NewAssetInput(
@@ -81,9 +82,9 @@ class AssetRepository(private val database: SpendWiseDatabase) {
     private val dao = database.assetDao()
     private val reminderDao = database.assetReminderDao()
     val data = combine(
-        dao.observeActiveAssets(), dao.observeIdentifiers(), dao.observeWarranties(), dao.observeMaintenanceRules(),
+        dao.observeActiveAssets(), dao.observeIdentifiers(), dao.observeWarranties(), dao.observeAllMaintenanceRules(),
         dao.observeMaintenanceEvents(), dao.observeDocuments(), dao.observeCommitmentLinks(), dao.observeTransactionLinks(),
-        dao.observeCheckpoints(), dao.observeCheckpointEvents()
+        dao.observeCheckpoints(), dao.observeCheckpointEvents(), dao.observeMaintenanceDocumentLinks()
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         AssetData(
@@ -91,7 +92,8 @@ class AssetRepository(private val database: SpendWiseDatabase) {
             values[2] as List<AssetWarrantyEntity>, values[3] as List<AssetMaintenanceRuleEntity>,
             values[4] as List<AssetMaintenanceEventEntity>, values[5] as List<AssetDocumentEntity>,
             values[6] as List<AssetCommitmentLinkEntity>, values[7] as List<AssetTransactionLinkEntity>,
-            values[8] as List<AssetCheckpointEntity>, values[9] as List<AssetCheckpointEventEntity>
+            values[8] as List<AssetCheckpointEntity>, values[9] as List<AssetCheckpointEventEntity>,
+            values[10] as List<AssetMaintenanceDocumentLinkEntity>
         )
     }
 
@@ -149,7 +151,25 @@ class AssetRepository(private val database: SpendWiseDatabase) {
     suspend fun create(input: NewAssetInput): Long = save(input)
 
     suspend fun addWarranty(warranty: AssetWarrantyEntity) = dao.insertWarranty(warranty)
-    suspend fun addRule(rule: AssetMaintenanceRuleEntity) = dao.insertRule(rule)
+    suspend fun saveRule(rule: AssetMaintenanceRuleEntity): Long = database.withTransaction {
+        require(rule.title.isNotBlank())
+        require(dao.getAsset(rule.assetId)?.isArchived == false)
+        if (rule.triggerType != MaintenanceTriggerType.MILEAGE) require(rule.intervalMonths != null && rule.intervalMonths > 0 && rule.baselineDateEpochDay != null)
+        if (rule.triggerType != MaintenanceTriggerType.TIME) require(rule.intervalKm != null && rule.intervalKm > 0 && rule.baselineMileageKm != null)
+        require(rule.warningDays >= 0 && rule.warningKm >= 0)
+        if (rule.id == 0L) dao.insertRule(rule.copy(title = rule.title.trim())) else {
+            val previous = requireNotNull(dao.getRule(rule.id))
+            require(previous.assetId == rule.assetId)
+            dao.updateRule(rule.copy(title = rule.title.trim(), createdAt = previous.createdAt, updatedAt = System.currentTimeMillis()))
+            rule.id
+        }
+    }
+    suspend fun addRule(rule: AssetMaintenanceRuleEntity) = saveRule(rule)
+    suspend fun archiveRule(id: Long, assetId: Long) = database.withTransaction {
+        val previous = requireNotNull(dao.getRule(id))
+        require(previous.assetId == assetId)
+        dao.updateRule(previous.copy(isActive = false, updatedAt = System.currentTimeMillis()))
+    }
     suspend fun saveCheckpoint(checkpoint: AssetCheckpointEntity): Long = database.withTransaction {
         AssetAttentionEngine.validateCheckpoint(checkpoint)
         require(dao.getAsset(checkpoint.assetId)?.isArchived == false)
@@ -235,12 +255,40 @@ class AssetRepository(private val database: SpendWiseDatabase) {
         return true
     }
 
-    suspend fun recordMaintenance(input: MaintenanceEventInput): Long = database.withTransaction {
-        val plan = planAssetMaintenanceWrite(dao.eventByKey(input.idempotencyKey), input.createExpense)
-        plan.existingEventId?.let { return@withTransaction it }
+    suspend fun recordMaintenance(input: MaintenanceEventInput): Long = completeMaintenance(input)
+
+    suspend fun completeMaintenance(input: MaintenanceEventInput, pendingDocuments: List<PendingAssetDocument> = emptyList(),
+                                    storage: AssetDocumentStorage? = null): Long {
+        require(pendingDocuments.isEmpty() || storage != null)
+        dao.eventByKey(input.idempotencyKey)?.let { return it.id }
+        val promoted = mutableListOf<StoredAssetDocument>()
+        try {
+            pendingDocuments.forEach { promoted += requireNotNull(storage).promote(it) }
+            val (eventId, created) = database.withTransaction {
+                dao.eventByKey(input.idempotencyKey)?.let { return@withTransaction it.id to false }
+                completeMaintenanceWrite(input, pendingDocuments, promoted) to true
+            }
+            if (!created) promoted.forEach { storage?.delete(it.relativePath) }
+            return eventId
+        } catch (error: Exception) {
+            promoted.forEach { storage?.delete(it.relativePath) }
+            throw error
+        }
+    }
+
+    private suspend fun completeMaintenanceWrite(input: MaintenanceEventInput,
+                                                 pendingDocuments: List<PendingAssetDocument>,
+                                                 promoted: List<StoredAssetDocument>): Long {
+        val asset = requireNotNull(dao.getAsset(input.assetId))
+        require(!asset.isArchived)
+        input.ruleId?.let { ruleId -> require(dao.getRule(ruleId)?.let { it.assetId == input.assetId && it.isActive } == true) }
         require(input.title.isNotBlank() && (input.costMinor == null || input.costMinor > 0))
-        val transactionId = if (plan.createTransaction) {
-            require(input.costMinor != null && input.categoryId != null)
+        require(input.mileageKm == null || canUpdateAssetMileage(asset.currentMileageKm, input.mileageKm))
+        val rule = input.ruleId?.let { dao.getRule(it) }
+        if (rule?.triggerType != null && rule.triggerType != MaintenanceTriggerType.TIME) require(input.mileageKm != null)
+        val transactionId = if (input.createExpense) {
+            require(input.costMinor != null && input.costMinor > 0 && input.categoryId != null)
+            require(database.categoryDao().getActiveCategories().any { it.id == input.categoryId })
             database.transactionDao().insert(
                 TransactionEntity(
                     type = TransactionType.EXPENSE, amountMinor = input.costMinor, categoryId = input.categoryId,
@@ -255,18 +303,32 @@ class AssetRepository(private val database: SpendWiseDatabase) {
             AssetMaintenanceEventEntity(
                 assetId = input.assetId, maintenanceRuleId = input.ruleId, title = input.title.trim(),
                 performedDateEpochDay = input.performedDate.toEpochDay(), mileageKm = input.mileageKm,
-                costMinor = input.costMinor, serviceMerchantId = input.merchantId, linkedTransactionId = transactionId,
+                costMinor = input.costMinor, serviceMerchantId = input.merchantId,
+                providerNameSnapshot = input.merchantName?.trim()?.takeIf(String::isNotBlank), linkedTransactionId = transactionId,
                 notes = input.notes?.trim()?.takeIf(String::isNotBlank), idempotencyKey = input.idempotencyKey,
                 createdAt = System.currentTimeMillis()
             )
         )
+        require(eventId > 0) { "Maintenance was already saved" }
         if (transactionId != null) dao.linkTransaction(AssetTransactionLinkEntity(input.assetId, transactionId, AssetTransactionRelationType.MAINTENANCE))
-        eventId
+        pendingDocuments.zip(promoted).forEach { (draft, stored) ->
+            val documentId = dao.insertDocument(AssetDocumentEntity(
+                assetId = input.assetId, documentType = draft.documentType, title = draft.title,
+                storedRelativePath = stored.relativePath, mimeType = stored.mimeType,
+                originalFileName = draft.originalFileName, fileSizeBytes = stored.sizeBytes,
+                createdAt = System.currentTimeMillis()
+            ))
+            dao.linkMaintenanceDocument(AssetMaintenanceDocumentLinkEntity(eventId, documentId))
+        }
+        if (input.mileageKm != null && (asset.currentMileageKm == null || input.mileageKm > asset.currentMileageKm))
+            dao.updateMileage(input.assetId, input.mileageKm, System.currentTimeMillis())
+        return eventId
     }
 
     suspend fun attachDocument(document: AssetDocumentEntity) = dao.insertDocument(document)
     suspend fun renameDocument(id: Long, title: String) { require(title.isNotBlank()); dao.renameDocument(id, title.trim()) }
     suspend fun deleteDocument(id: Long, storage: AssetDocumentStorage) {
+        require(dao.maintenanceLinkCount(id) == 0) { "This document is part of maintenance history" }
         dao.getDocument(id)?.let { storage.delete(it.storedRelativePath) }
         dao.deleteDocument(id)
     }

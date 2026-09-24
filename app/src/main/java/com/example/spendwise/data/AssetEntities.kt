@@ -110,6 +110,7 @@ data class AssetMaintenanceEventEntity(
     val mileageKm: Long?,
     val costMinor: Long?,
     val serviceMerchantId: Long?,
+    val providerNameSnapshot: String? = null,
     val linkedTransactionId: Long?,
     val notes: String?,
     val idempotencyKey: String,
@@ -132,6 +133,17 @@ data class AssetDocumentEntity(
     val fileSizeBytes: Long,
     val createdAt: Long
 )
+
+@Entity(
+    tableName = "asset_maintenance_document_links",
+    primaryKeys = ["maintenanceEventId", "assetDocumentId"],
+    foreignKeys = [
+        ForeignKey(entity = AssetMaintenanceEventEntity::class, parentColumns = ["id"], childColumns = ["maintenanceEventId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = AssetDocumentEntity::class, parentColumns = ["id"], childColumns = ["assetDocumentId"], onDelete = ForeignKey.CASCADE)
+    ],
+    indices = [Index("assetDocumentId")]
+)
+data class AssetMaintenanceDocumentLinkEntity(val maintenanceEventId: Long, val assetDocumentId: Long)
 
 @Entity(
     tableName = "asset_commitment_links",

@@ -19,11 +19,12 @@ import kotlinx.coroutines.launch
         DebtProfileEntity::class, DebtPaymentEntity::class, FinancingTermsEntity::class, LatePaymentRuleEntity::class
         , AssetEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
         AssetMaintenanceRuleEntity::class, AssetMaintenanceEventEntity::class, AssetDocumentEntity::class,
+        AssetMaintenanceDocumentLinkEntity::class,
         AssetCommitmentLinkEntity::class, AssetTransactionLinkEntity::class,
         AssetCheckpointEntity::class, AssetCheckpointEventEntity::class,
         AssetReminderRuleEntity::class, AssetNotificationDeliveryEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(
@@ -51,7 +52,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 "spendwise.db"
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -502,6 +503,21 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ruleId INTEGER NOT NULL,
                     occurrenceKey TEXT NOT NULL, deliveredAt INTEGER NOT NULL)""".trimIndent())
                 db.execSQL("CREATE UNIQUE INDEX index_asset_notification_deliveries_ruleId_occurrenceKey ON asset_notification_deliveries (ruleId, occurrenceKey)")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE asset_maintenance_events ADD COLUMN providerNameSnapshot TEXT")
+                db.execSQL("""UPDATE asset_maintenance_events SET providerNameSnapshot =
+                    (SELECT displayName FROM merchants WHERE merchants.id = asset_maintenance_events.serviceMerchantId)
+                    WHERE serviceMerchantId IS NOT NULL""".trimIndent())
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_maintenance_document_links (
+                    maintenanceEventId INTEGER NOT NULL, assetDocumentId INTEGER NOT NULL,
+                    PRIMARY KEY(maintenanceEventId, assetDocumentId),
+                    FOREIGN KEY(maintenanceEventId) REFERENCES asset_maintenance_events(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(assetDocumentId) REFERENCES asset_documents(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_maintenance_document_links_assetDocumentId ON asset_maintenance_document_links (assetDocumentId)")
             }
         }
     }

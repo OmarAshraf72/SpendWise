@@ -71,6 +71,35 @@ class AssetCalculationsTest {
         assertEquals(AssetMaintenanceWritePlan(existing.id, false, false), planAssetMaintenanceWrite(existing, true))
     }
 
+    @Test fun lateCompletionUsesActualMileageAndDateForNextOccurrence() {
+        val mileageRule = rule(MaintenanceTriggerType.MILEAGE, km = 10_000, baselineMileage = 80_000)
+        assertEquals(90_000L, MaintenanceDueCalculator.calculate(mileageRule, today, 91_250, null).nextDueMileageKm)
+        val completedMileage = event(mileageRule.id, "2026-09-22", 91_250)
+        assertEquals(101_250L, MaintenanceDueCalculator.calculate(mileageRule, today, 91_250, completedMileage).nextDueMileageKm)
+
+        val dateRule = rule(MaintenanceTriggerType.TIME, months = 12, baselineDate = "2025-01-01")
+        val completedDate = event(dateRule.id, "2026-01-10", null)
+        assertEquals(LocalDate.parse("2027-01-10"), MaintenanceDueCalculator.calculate(dateRule, today, null, completedDate).nextDueDate)
+    }
+
+    @Test fun combinedRuleDerivesBothTriggersFromActualCompletionWithoutFutureRows() {
+        val combined = rule(MaintenanceTriggerType.TIME_OR_MILEAGE, months = 12, km = 10_000,
+            baselineDate = "2025-01-01", baselineMileage = 80_000)
+        val completed = event(combined.id, "2026-01-10", 91_250)
+        val next = MaintenanceDueCalculator.calculate(combined, LocalDate.parse("2027-01-01"), 101_250, completed)
+        assertEquals(LocalDate.parse("2027-01-10"), next.nextDueDate)
+        assertEquals(101_250L, next.nextDueMileageKm)
+        assertEquals(MaintenanceDueStatus.DUE, next.status)
+        assertEquals(MaintenanceTriggerReason.MILEAGE, next.triggerReason)
+        assertEquals(1, listOf(completed).size)
+    }
+
+    @Test fun maintenanceMileageCannotMoveBackwards() {
+        assertFalse(canUpdateAssetMileage(91_250, 90_000))
+        assertTrue(canUpdateAssetMileage(91_250, 91_250))
+        assertTrue(canUpdateAssetMileage(91_250, 92_000))
+    }
+
     @Test fun documentMetadataHasNoBinaryAndPathsStayPrivate() {
         val fields = AssetDocumentEntity::class.java.declaredFields.map { it.name }
         assertFalse(fields.any { it.contains("blob", true) || it.contains("bytes", true) && it != "fileSizeBytes" })

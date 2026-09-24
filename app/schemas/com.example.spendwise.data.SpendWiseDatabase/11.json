@@ -1,0 +1,2341 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 11,
+    "identityHash": "6ba5cfb1db11e05a202076cf009fe917",
+    "entities": [
+      {
+        "tableName": "categories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `iconName` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL DEFAULT 0)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconName",
+            "columnName": "iconName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "transactions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `type` TEXT NOT NULL, `amountMinor` INTEGER NOT NULL, `categoryId` INTEGER, `merchant` TEXT, `note` TEXT, `transactionDate` INTEGER NOT NULL, `source` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `receiptGroupId` TEXT, `merchantId` INTEGER, `purchaseGroupId` TEXT, FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`merchantId`) REFERENCES `merchants`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amountMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "merchant",
+            "columnName": "merchant",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "transactionDate",
+            "columnName": "transactionDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiptGroupId",
+            "columnName": "receiptGroupId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "merchantId",
+            "columnName": "merchantId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "purchaseGroupId",
+            "columnName": "purchaseGroupId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transactions_categoryId",
+            "unique": false,
+            "columnNames": [
+              "categoryId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_categoryId` ON `${TABLE_NAME}` (`categoryId`)"
+          },
+          {
+            "name": "index_transactions_merchantId",
+            "unique": false,
+            "columnNames": [
+              "merchantId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_merchantId` ON `${TABLE_NAME}` (`merchantId`)"
+          },
+          {
+            "name": "index_transactions_transactionDate",
+            "unique": false,
+            "columnNames": [
+              "transactionDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_transactionDate` ON `${TABLE_NAME}` (`transactionDate`)"
+          },
+          {
+            "name": "index_transactions_receiptGroupId",
+            "unique": false,
+            "columnNames": [
+              "receiptGroupId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_receiptGroupId` ON `${TABLE_NAME}` (`receiptGroupId`)"
+          },
+          {
+            "name": "index_transactions_purchaseGroupId",
+            "unique": false,
+            "columnNames": [
+              "purchaseGroupId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_purchaseGroupId` ON `${TABLE_NAME}` (`purchaseGroupId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "categories",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "categoryId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "merchants",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "merchantId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "item_category_mappings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `normalizedItemName` TEXT NOT NULL, `normalizedMerchant` TEXT, `categoryId` INTEGER NOT NULL, `confirmationCount` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedItemName",
+            "columnName": "normalizedItemName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedMerchant",
+            "columnName": "normalizedMerchant",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confirmationCount",
+            "columnName": "confirmationCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_item_category_mappings_normalizedItemName_normalizedMerchant",
+            "unique": true,
+            "columnNames": [
+              "normalizedItemName",
+              "normalizedMerchant"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_item_category_mappings_normalizedItemName_normalizedMerchant` ON `${TABLE_NAME}` (`normalizedItemName`, `normalizedMerchant`)"
+          },
+          {
+            "name": "index_item_category_mappings_categoryId",
+            "unique": false,
+            "columnNames": [
+              "categoryId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_item_category_mappings_categoryId` ON `${TABLE_NAME}` (`categoryId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "categories",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "categoryId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "merchants",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `displayName` TEXT NOT NULL, `normalizedName` TEXT NOT NULL, `usageCount` INTEGER NOT NULL, `lastUsedAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `defaultCategoryId` INTEGER, `source` TEXT NOT NULL, FOREIGN KEY(`defaultCategoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalizedName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usageCount",
+            "columnName": "usageCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastUsedAt",
+            "columnName": "lastUsedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "defaultCategoryId",
+            "columnName": "defaultCategoryId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_merchants_normalizedName",
+            "unique": true,
+            "columnNames": [
+              "normalizedName"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_merchants_normalizedName` ON `${TABLE_NAME}` (`normalizedName`)"
+          },
+          {
+            "name": "index_merchants_defaultCategoryId",
+            "unique": false,
+            "columnNames": [
+              "defaultCategoryId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_merchants_defaultCategoryId` ON `${TABLE_NAME}` (`defaultCategoryId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "categories",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "defaultCategoryId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "financial_commitments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `amountMinor` INTEGER NOT NULL, `type` TEXT NOT NULL, `frequency` TEXT NOT NULL, `startDateEpochDay` INTEGER NOT NULL, `endDateEpochDay` INTEGER, `nextDueDateEpochDay` INTEGER NOT NULL, `isActive` INTEGER NOT NULL, `merchantId` INTEGER, `notes` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`merchantId`) REFERENCES `merchants`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountMinor",
+            "columnName": "amountMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "frequency",
+            "columnName": "frequency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDateEpochDay",
+            "columnName": "startDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateEpochDay",
+            "columnName": "endDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "nextDueDateEpochDay",
+            "columnName": "nextDueDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "merchantId",
+            "columnName": "merchantId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_financial_commitments_merchantId",
+            "unique": false,
+            "columnNames": [
+              "merchantId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_financial_commitments_merchantId` ON `${TABLE_NAME}` (`merchantId`)"
+          },
+          {
+            "name": "index_financial_commitments_nextDueDateEpochDay",
+            "unique": false,
+            "columnNames": [
+              "nextDueDateEpochDay"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_financial_commitments_nextDueDateEpochDay` ON `${TABLE_NAME}` (`nextDueDateEpochDay`)"
+          },
+          {
+            "name": "index_financial_commitments_isActive",
+            "unique": false,
+            "columnNames": [
+              "isActive"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_financial_commitments_isActive` ON `${TABLE_NAME}` (`isActive`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "merchants",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "merchantId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "commitment_occurrence_overrides",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `commitmentId` INTEGER NOT NULL, `dueDateEpochDay` INTEGER NOT NULL, `status` TEXT NOT NULL, `paidTransactionId` INTEGER, `paidAt` INTEGER, FOREIGN KEY(`commitmentId`) REFERENCES `financial_commitments`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`paidTransactionId`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "commitmentId",
+            "columnName": "commitmentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueDateEpochDay",
+            "columnName": "dueDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "paidTransactionId",
+            "columnName": "paidTransactionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "paidAt",
+            "columnName": "paidAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_commitment_occurrence_overrides_commitmentId_dueDateEpochDay",
+            "unique": true,
+            "columnNames": [
+              "commitmentId",
+              "dueDateEpochDay"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_commitment_occurrence_overrides_commitmentId_dueDateEpochDay` ON `${TABLE_NAME}` (`commitmentId`, `dueDateEpochDay`)"
+          },
+          {
+            "name": "index_commitment_occurrence_overrides_paidTransactionId",
+            "unique": false,
+            "columnNames": [
+              "paidTransactionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_commitment_occurrence_overrides_paidTransactionId` ON `${TABLE_NAME}` (`paidTransactionId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "financial_commitments",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "commitmentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "transactions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "paidTransactionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "debt_profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `commitmentId` INTEGER NOT NULL, `creditorName` TEXT, `originalPrincipalMinor` INTEGER NOT NULL, `startDateEpochDay` INTEGER NOT NULL, `expectedEndDateEpochDay` INTEGER, `repaymentMode` TEXT NOT NULL, `notes` TEXT, `isArchived` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`commitmentId`) REFERENCES `financial_commitments`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "commitmentId",
+            "columnName": "commitmentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creditorName",
+            "columnName": "creditorName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "originalPrincipalMinor",
+            "columnName": "originalPrincipalMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDateEpochDay",
+            "columnName": "startDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expectedEndDateEpochDay",
+            "columnName": "expectedEndDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "repaymentMode",
+            "columnName": "repaymentMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_debt_profiles_commitmentId",
+            "unique": true,
+            "columnNames": [
+              "commitmentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_debt_profiles_commitmentId` ON `${TABLE_NAME}` (`commitmentId`)"
+          },
+          {
+            "name": "index_debt_profiles_repaymentMode",
+            "unique": false,
+            "columnNames": [
+              "repaymentMode"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_debt_profiles_repaymentMode` ON `${TABLE_NAME}` (`repaymentMode`)"
+          },
+          {
+            "name": "index_debt_profiles_isArchived",
+            "unique": false,
+            "columnNames": [
+              "isArchived"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_debt_profiles_isArchived` ON `${TABLE_NAME}` (`isArchived`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "financial_commitments",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "commitmentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "debt_payments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `debtProfileId` INTEGER NOT NULL, `occurrenceDueDateEpochDay` INTEGER, `paymentDateEpochDay` INTEGER NOT NULL, `totalPaidMinor` INTEGER NOT NULL, `principalPaidMinor` INTEGER NOT NULL, `financingCostPaidMinor` INTEGER NOT NULL, `lateChargePaidMinor` INTEGER NOT NULL, `linkedTransactionId` INTEGER, `note` TEXT, `idempotencyKey` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`debtProfileId`) REFERENCES `debt_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`linkedTransactionId`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "debtProfileId",
+            "columnName": "debtProfileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occurrenceDueDateEpochDay",
+            "columnName": "occurrenceDueDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "paymentDateEpochDay",
+            "columnName": "paymentDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalPaidMinor",
+            "columnName": "totalPaidMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "principalPaidMinor",
+            "columnName": "principalPaidMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "financingCostPaidMinor",
+            "columnName": "financingCostPaidMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lateChargePaidMinor",
+            "columnName": "lateChargePaidMinor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "linkedTransactionId",
+            "columnName": "linkedTransactionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "idempotencyKey",
+            "columnName": "idempotencyKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_debt_payments_debtProfileId",
+            "unique": false,
+            "columnNames": [
+              "debtProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_debt_payments_debtProfileId` ON `${TABLE_NAME}` (`debtProfileId`)"
+          },
+          {
+            "name": "index_debt_payments_occurrenceDueDateEpochDay",
+            "unique": false,
+            "columnNames": [
+              "occurrenceDueDateEpochDay"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_debt_payments_occurrenceDueDateEpochDay` ON `${TABLE_NAME}` (`occurrenceDueDateEpochDay`)"
+          },
+          {
+            "name": "index_debt_payments_linkedTransactionId",
+            "unique": false,
+            "columnNames": [
+              "linkedTransactionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_debt_payments_linkedTransactionId` ON `${TABLE_NAME}` (`linkedTransactionId`)"
+          },
+          {
+            "name": "index_debt_payments_idempotencyKey",
+            "unique": true,
+            "columnNames": [
+              "idempotencyKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_debt_payments_idempotencyKey` ON `${TABLE_NAME}` (`idempotencyKey`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "debt_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "debtProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "transactions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "linkedTransactionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "financing_terms",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `debtProfileId` INTEGER NOT NULL, `financingType` TEXT NOT NULL, `totalRepayableMinor` INTEGER, `rateBasisPoints` INTEGER, `ratePeriod` TEXT, `rateBasis` TEXT, `calculationMethod` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`debtProfileId`) REFERENCES `debt_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "debtProfileId",
+            "columnName": "debtProfileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "financingType",
+            "columnName": "financingType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalRepayableMinor",
+            "columnName": "totalRepayableMinor",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rateBasisPoints",
+            "columnName": "rateBasisPoints",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "ratePeriod",
+            "columnName": "ratePeriod",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rateBasis",
+            "columnName": "rateBasis",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "calculationMethod",
+            "columnName": "calculationMethod",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_financing_terms_debtProfileId",
+            "unique": true,
+            "columnNames": [
+              "debtProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_financing_terms_debtProfileId` ON `${TABLE_NAME}` (`debtProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "debt_profiles",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "debtProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "late_payment_rules",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `debtProfileId` INTEGER NOT NULL, `gracePeriodDays` INTEGER NOT NULL, `chargeType` TEXT NOT NULL, `fixedChargeMinor` INTEGER, `rateBasisPoints` INTEGER, `chargeInterval` TEXT NOT NULL, `chargeBasis` TEXT NOT NULL, `minimumChargeMinor` INTEGER, `maximumChargeMinor` INTEGER, `isCompounding` INTEGER NOT NULL DEFAULT 0, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`debtProfileId`) REFERENCES `debt_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "debtProfileId",
+            "columnName": "debtProfileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gracePeriodDays",
+            "columnName": "gracePeriodDays",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chargeType",
+            "columnName": "chargeType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fixedChargeMinor",
+            "columnName": "fixedChargeMinor",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rateBasisPoints",
+            "columnName": "rateBasisPoints",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "chargeInterval",
+            "columnName": "chargeInterval",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chargeBasis",
+            "columnName": "chargeBasis",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minimumChargeMinor",
+            "columnName": "minimumChargeMinor",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "maximumChargeMinor",
+            "columnName": "maximumChargeMinor",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isCompounding",
+            "columnName": "isCompounding",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_late_payment_rules_debtProfileId",
+            "unique": true,
+            "columnNames": [
+              "debtProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_late_payment_rules_debtProfileId` ON `${TABLE_NAME}` (`debtProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "debt_profiles",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "debtProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "assets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `brand` TEXT, `model` TEXT, `purchaseDateEpochDay` INTEGER, `purchasePriceMinor` INTEGER, `sellerMerchantId` INTEGER, `currentMileageKm` INTEGER, `notes` TEXT, `isArchived` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `mileageUpdatedAt` INTEGER, FOREIGN KEY(`sellerMerchantId`) REFERENCES `merchants`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "brand",
+            "columnName": "brand",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "model",
+            "columnName": "model",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "purchaseDateEpochDay",
+            "columnName": "purchaseDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "purchasePriceMinor",
+            "columnName": "purchasePriceMinor",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sellerMerchantId",
+            "columnName": "sellerMerchantId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "currentMileageKm",
+            "columnName": "currentMileageKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mileageUpdatedAt",
+            "columnName": "mileageUpdatedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_assets_sellerMerchantId",
+            "unique": false,
+            "columnNames": [
+              "sellerMerchantId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_assets_sellerMerchantId` ON `${TABLE_NAME}` (`sellerMerchantId`)"
+          },
+          {
+            "name": "index_assets_type",
+            "unique": false,
+            "columnNames": [
+              "type"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_assets_type` ON `${TABLE_NAME}` (`type`)"
+          },
+          {
+            "name": "index_assets_isArchived",
+            "unique": false,
+            "columnNames": [
+              "isArchived"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_assets_isArchived` ON `${TABLE_NAME}` (`isArchived`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "merchants",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "sellerMerchantId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_identifiers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `type` TEXT NOT NULL, `label` TEXT, `value` TEXT NOT NULL, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_identifiers_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_identifiers_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_identifiers_assetId_type_value",
+            "unique": true,
+            "columnNames": [
+              "assetId",
+              "type",
+              "value"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_asset_identifiers_assetId_type_value` ON `${TABLE_NAME}` (`assetId`, `type`, `value`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_warranties",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `name` TEXT NOT NULL, `type` TEXT NOT NULL, `providerName` TEXT, `startDateEpochDay` INTEGER NOT NULL, `endDateEpochDay` INTEGER NOT NULL, `phone` TEXT, `website` TEXT, `notes` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerName",
+            "columnName": "providerName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "startDateEpochDay",
+            "columnName": "startDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endDateEpochDay",
+            "columnName": "endDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "website",
+            "columnName": "website",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_warranties_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_warranties_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_warranties_endDateEpochDay",
+            "unique": false,
+            "columnNames": [
+              "endDateEpochDay"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_warranties_endDateEpochDay` ON `${TABLE_NAME}` (`endDateEpochDay`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_maintenance_rules",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `title` TEXT NOT NULL, `triggerType` TEXT NOT NULL, `intervalMonths` INTEGER, `intervalKm` INTEGER, `baselineDateEpochDay` INTEGER, `baselineMileageKm` INTEGER, `warningDays` INTEGER NOT NULL, `warningKm` INTEGER NOT NULL, `isActive` INTEGER NOT NULL, `notes` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggerType",
+            "columnName": "triggerType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intervalMonths",
+            "columnName": "intervalMonths",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "intervalKm",
+            "columnName": "intervalKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "baselineDateEpochDay",
+            "columnName": "baselineDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "baselineMileageKm",
+            "columnName": "baselineMileageKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "warningDays",
+            "columnName": "warningDays",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "warningKm",
+            "columnName": "warningKm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_maintenance_rules_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_rules_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_maintenance_rules_isActive",
+            "unique": false,
+            "columnNames": [
+              "isActive"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_rules_isActive` ON `${TABLE_NAME}` (`isActive`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_maintenance_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `maintenanceRuleId` INTEGER, `title` TEXT NOT NULL, `performedDateEpochDay` INTEGER NOT NULL, `mileageKm` INTEGER, `costMinor` INTEGER, `serviceMerchantId` INTEGER, `providerNameSnapshot` TEXT, `linkedTransactionId` INTEGER, `notes` TEXT, `idempotencyKey` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`maintenanceRuleId`) REFERENCES `asset_maintenance_rules`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`serviceMerchantId`) REFERENCES `merchants`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`linkedTransactionId`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maintenanceRuleId",
+            "columnName": "maintenanceRuleId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "performedDateEpochDay",
+            "columnName": "performedDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mileageKm",
+            "columnName": "mileageKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "costMinor",
+            "columnName": "costMinor",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "serviceMerchantId",
+            "columnName": "serviceMerchantId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "providerNameSnapshot",
+            "columnName": "providerNameSnapshot",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "linkedTransactionId",
+            "columnName": "linkedTransactionId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "idempotencyKey",
+            "columnName": "idempotencyKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_maintenance_events_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_events_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_maintenance_events_maintenanceRuleId",
+            "unique": false,
+            "columnNames": [
+              "maintenanceRuleId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_events_maintenanceRuleId` ON `${TABLE_NAME}` (`maintenanceRuleId`)"
+          },
+          {
+            "name": "index_asset_maintenance_events_serviceMerchantId",
+            "unique": false,
+            "columnNames": [
+              "serviceMerchantId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_events_serviceMerchantId` ON `${TABLE_NAME}` (`serviceMerchantId`)"
+          },
+          {
+            "name": "index_asset_maintenance_events_linkedTransactionId",
+            "unique": false,
+            "columnNames": [
+              "linkedTransactionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_events_linkedTransactionId` ON `${TABLE_NAME}` (`linkedTransactionId`)"
+          },
+          {
+            "name": "index_asset_maintenance_events_idempotencyKey",
+            "unique": true,
+            "columnNames": [
+              "idempotencyKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_asset_maintenance_events_idempotencyKey` ON `${TABLE_NAME}` (`idempotencyKey`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "asset_maintenance_rules",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "maintenanceRuleId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "merchants",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "serviceMerchantId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "transactions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "linkedTransactionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_documents",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `documentType` TEXT NOT NULL, `title` TEXT NOT NULL, `storedRelativePath` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `originalFileName` TEXT NOT NULL, `fileSizeBytes` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "documentType",
+            "columnName": "documentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storedRelativePath",
+            "columnName": "storedRelativePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mimeType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalFileName",
+            "columnName": "originalFileName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileSizeBytes",
+            "columnName": "fileSizeBytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_documents_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_documents_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_documents_documentType",
+            "unique": false,
+            "columnNames": [
+              "documentType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_documents_documentType` ON `${TABLE_NAME}` (`documentType`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_maintenance_document_links",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`maintenanceEventId` INTEGER NOT NULL, `assetDocumentId` INTEGER NOT NULL, PRIMARY KEY(`maintenanceEventId`, `assetDocumentId`), FOREIGN KEY(`maintenanceEventId`) REFERENCES `asset_maintenance_events`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`assetDocumentId`) REFERENCES `asset_documents`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "maintenanceEventId",
+            "columnName": "maintenanceEventId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetDocumentId",
+            "columnName": "assetDocumentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "maintenanceEventId",
+            "assetDocumentId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_maintenance_document_links_assetDocumentId",
+            "unique": false,
+            "columnNames": [
+              "assetDocumentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_maintenance_document_links_assetDocumentId` ON `${TABLE_NAME}` (`assetDocumentId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "asset_maintenance_events",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "maintenanceEventId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "asset_documents",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetDocumentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_commitment_links",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`assetId` INTEGER NOT NULL, `commitmentId` INTEGER NOT NULL, `relationType` TEXT NOT NULL, PRIMARY KEY(`assetId`, `commitmentId`, `relationType`), FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`commitmentId`) REFERENCES `financial_commitments`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "commitmentId",
+            "columnName": "commitmentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationType",
+            "columnName": "relationType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "assetId",
+            "commitmentId",
+            "relationType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_commitment_links_commitmentId",
+            "unique": false,
+            "columnNames": [
+              "commitmentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_commitment_links_commitmentId` ON `${TABLE_NAME}` (`commitmentId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "financial_commitments",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "commitmentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_transaction_links",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`assetId` INTEGER NOT NULL, `transactionId` INTEGER NOT NULL, `relationType` TEXT NOT NULL, PRIMARY KEY(`assetId`, `transactionId`, `relationType`), FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`transactionId`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transactionId",
+            "columnName": "transactionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationType",
+            "columnName": "relationType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "assetId",
+            "transactionId",
+            "relationType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_transaction_links_transactionId",
+            "unique": false,
+            "columnNames": [
+              "transactionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_transaction_links_transactionId` ON `${TABLE_NAME}` (`transactionId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "transactions",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "transactionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_checkpoints",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `title` TEXT NOT NULL, `checkpointType` TEXT NOT NULL, `triggerMode` TEXT NOT NULL, `dueDateEpochDay` INTEGER, `dueMileageKm` INTEGER, `repeatMonths` INTEGER, `repeatKm` INTEGER, `warningDays` INTEGER, `warningKm` INTEGER, `notes` TEXT, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `rescheduledDueDateEpochDay` INTEGER, `rescheduledDueMileageKm` INTEGER, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "checkpointType",
+            "columnName": "checkpointType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggerMode",
+            "columnName": "triggerMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueDateEpochDay",
+            "columnName": "dueDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dueMileageKm",
+            "columnName": "dueMileageKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "repeatMonths",
+            "columnName": "repeatMonths",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "repeatKm",
+            "columnName": "repeatKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "warningDays",
+            "columnName": "warningDays",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "warningKm",
+            "columnName": "warningKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rescheduledDueDateEpochDay",
+            "columnName": "rescheduledDueDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rescheduledDueMileageKm",
+            "columnName": "rescheduledDueMileageKm",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_checkpoints_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_checkpoints_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_checkpoints_isActive",
+            "unique": false,
+            "columnNames": [
+              "isActive"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_checkpoints_isActive` ON `${TABLE_NAME}` (`isActive`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_checkpoint_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `checkpointId` INTEGER NOT NULL, `completedDateEpochDay` INTEGER NOT NULL, `completedMileageKm` INTEGER, `note` TEXT, `createdAt` INTEGER NOT NULL, `dueDateEpochDay` INTEGER, `dueMileageKm` INTEGER, FOREIGN KEY(`checkpointId`) REFERENCES `asset_checkpoints`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "checkpointId",
+            "columnName": "checkpointId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedDateEpochDay",
+            "columnName": "completedDateEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedMileageKm",
+            "columnName": "completedMileageKm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueDateEpochDay",
+            "columnName": "dueDateEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dueMileageKm",
+            "columnName": "dueMileageKm",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_checkpoint_events_checkpointId",
+            "unique": false,
+            "columnNames": [
+              "checkpointId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_checkpoint_events_checkpointId` ON `${TABLE_NAME}` (`checkpointId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "asset_checkpoints",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "checkpointId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_reminder_rules",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `assetId` INTEGER NOT NULL, `sourceType` TEXT NOT NULL, `sourceId` INTEGER NOT NULL, `triggerKind` TEXT NOT NULL, `leadValue` INTEGER NOT NULL, `isEnabled` INTEGER NOT NULL, FOREIGN KEY(`assetId`) REFERENCES `assets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assetId",
+            "columnName": "assetId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceType",
+            "columnName": "sourceType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceId",
+            "columnName": "sourceId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggerKind",
+            "columnName": "triggerKind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leadValue",
+            "columnName": "leadValue",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isEnabled",
+            "columnName": "isEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_reminder_rules_assetId",
+            "unique": false,
+            "columnNames": [
+              "assetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_asset_reminder_rules_assetId` ON `${TABLE_NAME}` (`assetId`)"
+          },
+          {
+            "name": "index_asset_reminder_rules_sourceType_sourceId_triggerKind_leadValue",
+            "unique": true,
+            "columnNames": [
+              "sourceType",
+              "sourceId",
+              "triggerKind",
+              "leadValue"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_asset_reminder_rules_sourceType_sourceId_triggerKind_leadValue` ON `${TABLE_NAME}` (`sourceType`, `sourceId`, `triggerKind`, `leadValue`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "assets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "assetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "asset_notification_deliveries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `ruleId` INTEGER NOT NULL, `occurrenceKey` TEXT NOT NULL, `deliveredAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ruleId",
+            "columnName": "ruleId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occurrenceKey",
+            "columnName": "occurrenceKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deliveredAt",
+            "columnName": "deliveredAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_asset_notification_deliveries_ruleId_occurrenceKey",
+            "unique": true,
+            "columnNames": [
+              "ruleId",
+              "occurrenceKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_asset_notification_deliveries_ruleId_occurrenceKey` ON `${TABLE_NAME}` (`ruleId`, `occurrenceKey`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6ba5cfb1db11e05a202076cf009fe917')"
+    ]
+  }
+}

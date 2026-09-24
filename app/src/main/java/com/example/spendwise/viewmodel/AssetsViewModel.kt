@@ -102,6 +102,7 @@ data class AssetDetailUiState(
     val checkpointEvents: List<AssetCheckpointEventEntity> = emptyList(),
     val attention: List<AssetAttentionItem> = emptyList(),
     val documents: List<AssetDocumentEntity> = emptyList(),
+    val maintenanceDocumentIds: Set<Long> = emptySet(),
     val linkedCommitments: List<Pair<AssetCommitmentLinkEntity, CommitmentWithMerchant>> = emptyList(),
     val dueByRule: Map<Long, MaintenanceDueResult> = emptyMap()
 )
@@ -119,7 +120,7 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     val uiState = combine(repository.data, commitments, assetTodayFlow()) { data, commitmentData, today ->
         val asset = data.assets.firstOrNull { it.id == assetId }
         val events = data.events.filter { it.assetId == assetId }
-        val rules = data.rules.filter { it.assetId == assetId }
+        val rules = data.rules.filter { it.assetId == assetId && it.isActive }
         AssetDetailUiState(
             asset = asset,
             identifiers = data.identifiers.filter { it.assetId == assetId },
@@ -130,6 +131,7 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
             checkpointEvents = data.checkpointEvents.filter { event -> data.checkpoints.any { it.id == event.checkpointId && it.assetId == assetId } },
             attention = AssetAttentionEngine.evaluate(data, today, assetId),
             documents = data.documents.filter { it.assetId == assetId },
+            maintenanceDocumentIds = data.maintenanceDocumentLinks.mapTo(mutableSetOf()) { it.assetDocumentId },
             linkedCommitments = data.commitmentLinks.filter { it.assetId == assetId }.mapNotNull { link ->
                 commitmentData.commitments.firstOrNull { it.commitment.id == link.commitmentId }?.let { link to it }
             },
@@ -174,6 +176,92 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     fun deleteDocument(id: Long) = viewModelScope.launch { repository.deleteDocument(id, storage) }
     fun renameDocument(id: Long, title: String) = viewModelScope.launch { repository.renameDocument(id, title) }
     fun archive(done: () -> Unit) = viewModelScope.launch { repository.archive(assetId); done() }
+}
+
+data class MaintenanceUiState(
+    val asset: AssetEntity? = null,
+    val rules: List<AssetMaintenanceRuleEntity> = emptyList(),
+    val events: List<AssetMaintenanceEventEntity> = emptyList(),
+    val dueByRule: Map<Long, MaintenanceDueResult> = emptyMap(),
+    val documents: List<AssetDocumentEntity> = emptyList(),
+    val documentLinks: List<AssetMaintenanceDocumentLinkEntity> = emptyList()
+)
+
+class MaintenanceManagementViewModel(application: Application, savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
+    private val assetId: Long = checkNotNull(savedStateHandle["assetId"])
+    private val repository = AssetRepository(SpendWiseDatabase.getInstance(application))
+    private val storage = AssetDocumentStorage(application)
+    private val draftId = UUID.randomUUID().toString()
+    private val _pendingDocuments = MutableStateFlow<List<PendingAssetDocument>>(emptyList())
+    val pendingDocuments = _pendingDocuments.asStateFlow()
+    private val _busy = MutableStateFlow(false)
+    val busy = _busy.asStateFlow()
+    private var stagingJob: Job? = null
+    private var saveJob: Job? = null
+    private val database = SpendWiseDatabase.getInstance(application)
+    val categories = database.categoryDao().observeCategoriesForEntry().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val merchants = MerchantRepository(database.merchantDao()).merchants.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val uiState = combine(repository.data, assetTodayFlow()) { data, today ->
+        val asset = data.assets.firstOrNull { it.id == assetId }
+        val rules = data.rules.filter { it.assetId == assetId }
+        val events = data.events.filter { it.assetId == assetId }
+        MaintenanceUiState(asset, rules, events,
+            rules.filter { it.isActive }.associate { rule ->
+                val latest = events.filter { it.maintenanceRuleId == rule.id }
+                    .maxWithOrNull(compareBy<AssetMaintenanceEventEntity> { it.performedDateEpochDay }.thenBy { it.createdAt })
+                rule.id to MaintenanceDueCalculator.calculate(rule, today, asset?.currentMileageKm, latest)
+            }, data.documents.filter { it.assetId == assetId }, data.maintenanceDocumentLinks)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MaintenanceUiState())
+
+    fun saveRule(rule: AssetMaintenanceRuleEntity, done: (String?) -> Unit) = viewModelScope.launch {
+        runCatching { repository.saveRule(rule.copy(assetId = assetId)) }
+            .onSuccess { done(null) }.onFailure { done(it.message ?: "Rule could not be saved") }
+    }
+    fun archiveRule(id: Long, done: (String?) -> Unit) = viewModelScope.launch {
+        runCatching { repository.archiveRule(id, assetId) }
+            .onSuccess { done(null) }.onFailure { done(it.message ?: "Rule could not be archived") }
+    }
+    fun stageDocuments(uris: List<Uri>, done: (String?) -> Unit) {
+        if (_busy.value) return
+        _busy.value = true
+        stagingJob = viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) {
+                uris.map { storage.stage(it, draftId, AssetDocumentType.SERVICE_RECEIPT, "Service receipt") }
+            } }.onSuccess { _pendingDocuments.value = _pendingDocuments.value + it; done(null) }
+                .onFailure { done("Document could not be copied. Choose an image or PDF.") }
+            _busy.value = false
+        }
+    }
+    fun removeDocument(document: PendingAssetDocument) {
+        _pendingDocuments.value = _pendingDocuments.value - document
+        viewModelScope.launch(Dispatchers.IO) { storage.deleteDraft(document) }
+    }
+    fun clearDrafts() {
+        _pendingDocuments.value = emptyList()
+        viewModelScope.launch(Dispatchers.IO) { stagingJob?.join(); storage.clearDraft(draftId) }
+    }
+    fun complete(input: MaintenanceEventInput, done: (String?) -> Unit) {
+        if (_busy.value) return
+        _busy.value = true
+        saveJob = viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) {
+                repository.completeMaintenance(input.copy(assetId = assetId), _pendingDocuments.value, storage)
+            } }.onSuccess {
+                _pendingDocuments.value = emptyList()
+                withContext(Dispatchers.IO) { storage.clearDraft(draftId) }
+                runCatching { AssetReminderCoordinator(getApplication()).evaluate(AssetReminderEvaluation.MILEAGE, assetId) }
+                done(null)
+            }.onFailure { done(it.message ?: "Maintenance could not be saved") }
+            _busy.value = false
+        }
+    }
+    fun documentFile(relativePath: String) = storage.file(relativePath)
+    override fun onCleared() {
+        CoroutineScope(Dispatchers.IO).launch {
+            stagingJob?.join(); saveJob?.join(); storage.clearDraft(draftId)
+        }
+        super.onCleared()
+    }
 }
 
 private fun emptyAssetData() = AssetData(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
