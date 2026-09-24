@@ -3,8 +3,10 @@ package com.example.spendwise.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,53 +66,114 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
         }
         message?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
         item {
-            MaintenanceSection("Next / Current maintenance") {
+            MaintenanceSection("Upcoming maintenance") {
                 val active = state.rules.filter { it.isActive }
-                if (active.isEmpty()) Text("No maintenance plan")
-                active.forEach { rule ->
-                    val due = state.dueByRule[rule.id]
-                    Text(rule.title, fontWeight = FontWeight.SemiBold)
-                    Text(rule.triggerType.name.replace('_', ' ').lowercase().replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodySmall)
-                    Text(buildList {
-                        due?.nextDueDate?.let { add("Next: ${it.format(maintenanceDateFormat)}") }
-                        due?.nextDueMileageKm?.let { add("Next: $it km") }
-                    }.joinToString(" · ").ifEmpty { "Next due unavailable" })
-                    due?.let { Text(it.status.name.replace('_', ' '), color = if (it.status == MaintenanceDueStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) }
-                    TextButton(onClick = { completingRule = rule; completing = true }) { Text("Complete") }
-                    HorizontalDivider()
+                if (active.isEmpty()) {
+                    Text("No upcoming maintenance", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = { completingRule = null; completing = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text("Record maintenance")
+                    }
+                } else {
+                    active.forEach { rule ->
+                        val due = state.dueByRule[rule.id]
+                        Text(rule.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        val nextDueText = buildString {
+                            if (due?.nextDueMileageKm != null) append("Next at %,d km".format(due.nextDueMileageKm))
+                            if (due?.nextDueMileageKm != null && due.nextDueDate != null) append(" · ")
+                            if (due?.nextDueDate != null) append("Next on ${due.nextDueDate.format(maintenanceDateFormat)}")
+                            if (isEmpty()) append("Next due unavailable")
+                        }
+                        Text(nextDueText, style = MaterialTheme.typography.bodyMedium)
+                        due?.let {
+                            val statusText = when (it.status) {
+                                MaintenanceDueStatus.OVERDUE -> "Overdue"
+                                MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> "Due soon"
+                                MaintenanceDueStatus.OK -> "On track"
+                            }
+                            val statusColor = when (it.status) {
+                                MaintenanceDueStatus.OVERDUE -> MaterialTheme.colorScheme.error
+                                MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> MaterialTheme.colorScheme.primary
+                                MaintenanceDueStatus.OK -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                            Text(statusText, style = MaterialTheme.typography.labelMedium, color = statusColor, fontWeight = FontWeight.Medium)
+                        }
+                        TextButton(
+                            onClick = { completingRule = rule; completing = true },
+                            modifier = Modifier.heightIn(min = 48.dp)
+                        ) {
+                            Text("Mark as done")
+                        }
+                        HorizontalDivider()
+                    }
+                    TextButton(
+                        onClick = { completingRule = null; completing = true },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    ) {
+                        Text("+ Record other maintenance")
+                    }
                 }
-                Button(onClick = { completingRule = null; completing = true }) { Text("Complete maintenance") }
             }
         }
         item {
-            MaintenanceSection("Maintenance rules") {
-                state.rules.forEach { rule ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(rule.title, fontWeight = FontWeight.SemiBold)
-                            Text(if (rule.isActive) rule.triggerType.name.replace('_', ' ') else "Archived", style = MaterialTheme.typography.bodySmall)
+            var rulesExpanded by remember { mutableStateOf(false) }
+            Card(Modifier.fillMaxWidth().clickable { rulesExpanded = !rulesExpanded }) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Manage maintenance rules", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(if (rulesExpanded) "Hide" else "Show", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (rulesExpanded) {
+                        HorizontalDivider()
+                        if (state.rules.isEmpty()) {
+                            Text("No rules configured", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        if (rule.isActive) {
-                            TextButton(onClick = { editingRule = rule }) { Text("Edit") }
-                            TextButton(onClick = { archivingRule = rule }) { Text("Archive") }
+                        state.rules.forEach { rule ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(rule.title, fontWeight = FontWeight.SemiBold)
+                                    val triggerLabel = when (rule.triggerType) {
+                                        MaintenanceTriggerType.MILEAGE -> "Distance"
+                                        MaintenanceTriggerType.TIME -> "Time"
+                                        MaintenanceTriggerType.TIME_OR_MILEAGE -> "Whichever comes first"
+                                    }
+                                    Text(
+                                        if (rule.isActive) triggerLabel else "$triggerLabel (Archived)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (rule.isActive) {
+                                    TextButton(onClick = { editingRule = rule }) { Text("Edit") }
+                                    TextButton(onClick = { archivingRule = rule }) { Text("Archive") }
+                                }
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = { addingRule = true },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) {
+                            Text("Add maintenance rule")
                         }
                     }
                 }
-                OutlinedButton(onClick = { addingRule = true }) { Text("Add rule") }
             }
         }
         item { Text("History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
-        if (state.events.isEmpty()) item { Text("No completed maintenance yet") }
+        if (state.events.isEmpty()) item { Text("No completed maintenance yet", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(state.events, key = { it.id }) { event ->
             val documents = state.documentLinks.filter { it.maintenanceEventId == event.id }
                 .mapNotNull { link -> state.documents.firstOrNull { it.id == link.assetDocumentId } }
             MaintenanceSection(event.title) {
-                Text(LocalDate.ofEpochDay(event.performedDateEpochDay).format(maintenanceDateFormat))
-                event.mileageKm?.let { Text("Mileage: $it km") }
-                event.costMinor?.let { Text("Cost: ${formatEgp(it)}") }
-                event.providerNameSnapshot?.let { Text("Provider: $it") }
-                event.notes?.let { Text(it) }
-                Text(if (event.linkedTransactionId != null) "Expense linked" else "No expense created", style = MaterialTheme.typography.bodySmall)
+                Text(LocalDate.ofEpochDay(event.performedDateEpochDay).format(maintenanceDateFormat), style = MaterialTheme.typography.bodyMedium)
+                event.mileageKm?.let { Text("%,d km".format(it), style = MaterialTheme.typography.bodyMedium) }
+                event.costMinor?.let { Text(formatEgp(it), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium) }
+                event.providerNameSnapshot?.let { Text("Provider: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                event.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                Text(if (event.linkedTransactionId != null) "Expense linked" else "No expense created", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (documents.isNotEmpty()) Text("Documents (${documents.size})", fontWeight = FontWeight.SemiBold)
                 documents.forEach { document ->
                     TextButton(onClick = {
@@ -155,44 +220,133 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
     } }
 }
 
-@Composable private fun MaintenanceRuleEditor(asset: AssetEntity, existing: AssetMaintenanceRuleEntity?, dismiss: () -> Unit,
-                                              save: (AssetMaintenanceRuleEntity) -> Unit) {
+@Composable private fun MaintenanceRuleEditor(
+    asset: AssetEntity,
+    existing: AssetMaintenanceRuleEntity?,
+    dismiss: () -> Unit,
+    save: (AssetMaintenanceRuleEntity) -> Unit
+) {
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
-    var trigger by remember(existing?.id) { mutableStateOf(existing?.triggerType ?: MaintenanceTriggerType.TIME) }
+    var trigger by remember(existing?.id) { mutableStateOf(existing?.triggerType ?: MaintenanceTriggerType.TIME_OR_MILEAGE) }
     var months by remember(existing?.id) { mutableStateOf(existing?.intervalMonths?.toString().orEmpty()) }
     var km by remember(existing?.id) { mutableStateOf(existing?.intervalKm?.toString().orEmpty()) }
     var baselineDate by remember(existing?.id) { mutableStateOf(existing?.baselineDateEpochDay?.let(LocalDate::ofEpochDay) ?: LocalDate.now()) }
     var baselineKm by remember(existing?.id) { mutableStateOf(existing?.baselineMileageKm?.toString() ?: asset.currentMileageKm?.toString().orEmpty()) }
     var notes by remember(existing?.id) { mutableStateOf(existing?.notes.orEmpty()) }
+    var showAdvanced by remember { mutableStateOf(false) }
     var pickingDate by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    AlertDialog(onDismissRequest = dismiss, title = { Text(if (existing == null) "Add maintenance rule" else "Edit maintenance rule") },
-        text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(title, { title = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
-            MaintenanceSelect("Trigger", trigger.name.replace('_', ' '), MaintenanceTriggerType.entries.map { it.name.replace('_', ' ') }) {
-                trigger = MaintenanceTriggerType.entries[it]
+
+    val triggerLabels = listOf("Whichever comes first", "Distance", "Time")
+    val triggerValues = listOf(MaintenanceTriggerType.TIME_OR_MILEAGE, MaintenanceTriggerType.MILEAGE, MaintenanceTriggerType.TIME)
+    val selectedTriggerLabel = when (trigger) {
+        MaintenanceTriggerType.TIME_OR_MILEAGE -> "Whichever comes first"
+        MaintenanceTriggerType.MILEAGE -> "Distance"
+        MaintenanceTriggerType.TIME -> "Time"
+    }
+
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = { Text(if (existing == null) "Add maintenance rule" else "Edit maintenance rule") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Suggested maintenance", style = MaterialTheme.typography.labelLarge)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(listOf("Engine oil", "Oil filter", "Air filter", "Cabin filter", "Brakes", "Tires", "Battery", "Coolant", "Transmission service")) { suggestion ->
+                        OutlinedButton(onClick = { title = suggestion }) { Text(suggestion, maxLines = 1) }
+                    }
+                }
+                OutlinedTextField(
+                    value = title, onValueChange = { title = it },
+                    label = { Text("Maintenance name") },
+                    placeholder = { Text("e.g. Air filter") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                MaintenanceSelect("Repeat by", selectedTriggerLabel, triggerLabels) { index ->
+                    trigger = triggerValues[index]
+                }
+                if (trigger != MaintenanceTriggerType.TIME) {
+                    OutlinedTextField(
+                        value = km, onValueChange = { km = it.filter(Char::isDigit) },
+                        label = { Text("Every (km)") },
+                        placeholder = { Text("5000") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    asset.currentMileageKm?.let { current ->
+                        Text("Start from current mileage: %,d km".format(current), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (trigger != MaintenanceTriggerType.MILEAGE) {
+                    OutlinedTextField(
+                        value = months, onValueChange = { months = it.filter(Char::isDigit) },
+                        label = { Text("Every (months)") },
+                        placeholder = { Text("6") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                OutlinedTextField(
+                    value = notes, onValueChange = { notes = it },
+                    label = { Text("Notes (optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    Modifier.fillMaxWidth().clickable { showAdvanced = !showAdvanced }.padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Advanced settings", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(if (showAdvanced) "Hide" else "Show", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                if (showAdvanced) {
+                    if (trigger != MaintenanceTriggerType.MILEAGE) {
+                        OutlinedButton(onClick = { pickingDate = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Baseline date: ${baselineDate.format(maintenanceDateFormat)}")
+                        }
+                    }
+                    if (trigger != MaintenanceTriggerType.TIME) {
+                        OutlinedTextField(
+                            value = baselineKm, onValueChange = { baselineKm = it.filter(Char::isDigit) },
+                            label = { Text("Baseline mileage (km)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
-            if (trigger != MaintenanceTriggerType.MILEAGE) {
-                OutlinedTextField(months, { months = it.filter(Char::isDigit) }, label = { Text("Every months") }, modifier = Modifier.fillMaxWidth())
-                OutlinedButton(onClick = { pickingDate = true }) { Text("Baseline: ${baselineDate.format(maintenanceDateFormat)}") }
-            }
-            if (trigger != MaintenanceTriggerType.TIME) {
-                OutlinedTextField(km, { km = it.filter(Char::isDigit) }, label = { Text("Every km") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(baselineKm, { baselineKm = it.filter(Char::isDigit) }, label = { Text("Baseline mileage (km)") }, modifier = Modifier.fillMaxWidth())
-            }
-            OutlinedTextField(notes, { notes = it }, label = { Text("Notes (optional)") }, modifier = Modifier.fillMaxWidth())
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        } }, confirmButton = { TextButton(onClick = {
-            val m = months.toIntOrNull(); val k = km.toLongOrNull(); val base = baselineKm.toLongOrNull()
-            if (title.isBlank() || (trigger != MaintenanceTriggerType.MILEAGE && (m == null || m <= 0)) ||
-                (trigger != MaintenanceTriggerType.TIME && (k == null || k <= 0 || base == null))) error = "Enter a name and valid interval/baseline"
-            else save(AssetMaintenanceRuleEntity(id = existing?.id ?: 0, assetId = asset.id, title = title.trim(), triggerType = trigger,
-                intervalMonths = m.takeIf { trigger != MaintenanceTriggerType.MILEAGE }, intervalKm = k.takeIf { trigger != MaintenanceTriggerType.TIME },
-                baselineDateEpochDay = baselineDate.toEpochDay().takeIf { trigger != MaintenanceTriggerType.MILEAGE },
-                baselineMileageKm = base.takeIf { trigger != MaintenanceTriggerType.TIME }, warningDays = existing?.warningDays ?: 30,
-                warningKm = existing?.warningKm ?: 1000, notes = notes.trim().takeIf(String::isNotBlank),
-                createdAt = existing?.createdAt ?: System.currentTimeMillis(), updatedAt = System.currentTimeMillis()))
-        }) { Text("Save") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val m = months.toIntOrNull()
+                val k = km.toLongOrNull()
+                val base = baselineKm.toLongOrNull() ?: asset.currentMileageKm ?: 0L
+                if (title.isBlank() || (trigger != MaintenanceTriggerType.MILEAGE && (m == null || m <= 0)) ||
+                    (trigger != MaintenanceTriggerType.TIME && (k == null || k <= 0))) {
+                    error = "Enter a name and valid interval"
+                } else {
+                    save(AssetMaintenanceRuleEntity(
+                        id = existing?.id ?: 0, assetId = asset.id, title = title.trim(), triggerType = trigger,
+                        intervalMonths = m.takeIf { trigger != MaintenanceTriggerType.MILEAGE },
+                        intervalKm = k.takeIf { trigger != MaintenanceTriggerType.TIME },
+                        baselineDateEpochDay = baselineDate.toEpochDay().takeIf { trigger != MaintenanceTriggerType.MILEAGE },
+                        baselineMileageKm = base.takeIf { trigger != MaintenanceTriggerType.TIME },
+                        warningDays = existing?.warningDays ?: 30,
+                        warningKm = existing?.warningKm ?: 1000,
+                        notes = notes.trim().takeIf(String::isNotBlank),
+                        createdAt = existing?.createdAt ?: System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis()
+                    ))
+                }
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } }
+    )
     if (pickingDate) SpendWiseDatePickerDialog(baselineDate, { baselineDate = it; pickingDate = false }, { pickingDate = false })
 }
 
@@ -203,7 +357,10 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
     var ruleId by remember(initialRule?.id) { mutableStateOf(initialRule?.id) }
     var title by remember(initialRule?.id) { mutableStateOf(initialRule?.title.orEmpty()) }
     var performed by remember { mutableStateOf(LocalDate.now()) }
-    var mileage by remember { mutableStateOf(asset.currentMileageKm?.toString().orEmpty()) }
+    val initialMileage = asset.currentMileageKm?.toString().orEmpty()
+    var mileageState by remember {
+        mutableStateOf(TextFieldValue(text = initialMileage, selection = TextRange(0, initialMileage.length)))
+    }
     var cost by remember { mutableStateOf("") }
     var provider by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
@@ -221,8 +378,20 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
             }
             OutlinedTextField(title, { title = it }, label = { Text("Work performed") }, modifier = Modifier.fillMaxWidth())
             OutlinedButton(onClick = { pickingDate = true }) { Text("Performed: ${performed.format(maintenanceDateFormat)}") }
-            OutlinedTextField(mileage, { mileage = it.filter(Char::isDigit) }, label = { Text("Mileage (km)${if (selectedRule?.triggerType != null && selectedRule.triggerType != MaintenanceTriggerType.TIME) " required" else " optional"}") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = mileageState,
+                onValueChange = { mileageState = it.copy(text = it.text.filter(Char::isDigit)) },
+                label = { Text("Mileage (km)${if (selectedRule?.triggerType != null && selectedRule.triggerType != MaintenanceTriggerType.TIME) " required" else " optional"}") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (asset.currentMileageKm != null && asset.currentMileageKm > 0) {
+                Text(
+                    "Current mileage: %,d km".format(asset.currentMileageKm),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             OutlinedTextField(cost, { cost = it }, label = { Text("Cost (EGP, optional)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
             MaintenanceSelect("Known provider", "Select merchant (optional)", listOf("None") + merchants.map { it.displayName }) {
                 provider = if (it == 0) "" else merchants[it - 1].displayName
@@ -241,11 +410,11 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         } }, confirmButton = { TextButton(onClick = {
             val amount = cost.takeIf(String::isNotBlank)?.let(::parseEgpToMinor)
-            val completedMileage = mileage.toLongOrNull()
+            val completedMileage = mileageState.text.toLongOrNull()
             error = when {
                 title.isBlank() -> "Enter the work performed"
                 cost.isNotBlank() && (amount == null || amount <= 0) -> "Enter a valid positive cost"
-                mileage.isNotBlank() && completedMileage == null -> "Enter a valid mileage"
+                mileageState.text.isNotBlank() && completedMileage == null -> "Enter a valid mileage"
                 completedMileage != null && !canUpdateAssetMileage(asset.currentMileageKm, completedMileage) -> "Mileage cannot be lower than current mileage"
                 selectedRule?.triggerType != null && selectedRule.triggerType != MaintenanceTriggerType.TIME && completedMileage == null -> "Mileage is required for this rule"
                 createExpense && (amount == null || amount <= 0 || categoryId == null) -> "Expense needs a positive cost and category"

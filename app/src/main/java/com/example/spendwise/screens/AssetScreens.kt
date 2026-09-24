@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DateRange
@@ -279,16 +281,31 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
             if (relevant == null) Text("No maintenance plan") else {
                 Text(relevant.title, fontWeight = FontWeight.SemiBold)
                 state.dueByRule[relevant.id]?.let { due ->
-                    Text(due.dueLabel())
-                    Text(due.status.name.replace('_', ' '), color = if (due.status == MaintenanceDueStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                    val nextDueText = buildString {
+                        if (due.nextDueMileageKm != null) append("Next at %,d km".format(due.nextDueMileageKm))
+                        else if (due.nextDueDate != null) append("Next on ${due.nextDueDate.format(assetDateFormatter)}")
+                        else append("Next due unavailable")
+                    }
+                    Text(nextDueText)
+                    val statusText = when (due.status) {
+                        MaintenanceDueStatus.OVERDUE -> "Overdue"
+                        MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> "Due soon"
+                        MaintenanceDueStatus.OK -> "On track"
+                    }
+                    val statusColor = when (due.status) {
+                        MaintenanceDueStatus.OVERDUE -> MaterialTheme.colorScheme.error
+                        MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> MaterialTheme.colorScheme.primary
+                        MaintenanceDueStatus.OK -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Text(statusText, color = statusColor)
                 }
                 state.attention.firstOrNull { it.sourceType == AssetAttentionSource.MAINTENANCE && it.sourceId == relevant.id }?.let { item ->
                     TextButton(onClick = { reminderTarget = item }) { Text("Reminders") }
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (relevant != null) TextButton(onClick = { onMaintenance(asset.id, true, relevant.id) }) { Text("Complete maintenance", maxLines = 1) }
-                TextButton(onClick = { onMaintenance(asset.id, false, null) }) { Text(if (relevant == null) "Add maintenance" else "View maintenance", maxLines = 1) }
+                if (relevant != null) TextButton(onClick = { onMaintenance(asset.id, true, relevant.id) }) { Text("Mark as done", maxLines = 1) }
+                TextButton(onClick = { onMaintenance(asset.id, false, null) }) { Text(if (relevant == null) "Set up maintenance" else "View maintenance", maxLines = 1) }
             }
         } }
         item { DetailSection("Checkpoints") {
@@ -351,27 +368,69 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
 
 @Composable private fun DetailSection(title: String, content: @Composable ColumnScope.() -> Unit) { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold); content() } } }
 
-@Composable private fun MileageDialog(current: Long?, dismiss: () -> Unit, save: (Long) -> Unit) { var value by remember { mutableStateOf(current?.toString().orEmpty()) }; AlertDialog(onDismissRequest = dismiss, title = { Text("Update mileage") }, text = { OutlinedTextField(value, { value = it.filter(Char::isDigit) }, label = { Text("Mileage (km)") }) }, confirmButton = { TextButton(onClick = { value.toLongOrNull()?.let(save) }) { Text("Save") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } }) }
+@Composable private fun MileageDialog(current: Long?, dismiss: () -> Unit, save: (Long) -> Unit) {
+    val initialText = current?.toString().orEmpty()
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(text = initialText, selection = TextRange(0, initialText.length)))
+    }
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = { Text("Update mileage") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (current != null && current > 0) {
+                    Text(
+                        "Current mileage: %,d km".format(current),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedTextField(
+                    value = textFieldValue,
+                    onValueChange = { textFieldValue = it.copy(text = it.text.filter(Char::isDigit)) },
+                    label = { Text("New mileage (km)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                textFieldValue.text.toLongOrNull()?.let(save)
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } }
+    )
+}
 
 @Composable private fun WarrantyDialog(assetId: Long, purchaseDate: Long?, dismiss: () -> Unit, save: (AssetWarrantyEntity) -> Unit) { var name by remember { mutableStateOf("Warranty") }; var type by remember { mutableStateOf(AssetWarrantyType.MANUFACTURER) }; var provider by remember { mutableStateOf("") }; var phone by remember { mutableStateOf("") }; var website by remember { mutableStateOf("") }; var notes by remember { mutableStateOf("") }; var start by remember(purchaseDate) { mutableStateOf(purchaseDate?.let(LocalDate::ofEpochDay) ?: LocalDate.now()) }; var end by remember(start) { mutableStateOf(start.plusYears(1)) }; var pick by remember { mutableStateOf<String?>(null) }; AlertDialog(onDismissRequest = dismiss, title = { Text("Add warranty") }, text = { Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(name, { name = it }, label = { Text("Name") }); AssetEnumDropdown("Type", type, AssetWarrantyType.entries) { type = it }; OutlinedTextField(provider, { provider = it }, label = { Text("Provider (optional)") }); OutlinedTextField(phone, { phone = it }, label = { Text("Phone (optional)") }); OutlinedTextField(website, { website = it }, label = { Text("Website (optional)") }); DateButton("Start", start) { pick = "start" }; DateButton("Expiry", end) { pick = "end" }; OutlinedTextField(notes, { notes = it }, label = { Text("Notes (optional)") }) } }, confirmButton = { TextButton(onClick = { if (name.isNotBlank() && !end.isBefore(start)) { val now = System.currentTimeMillis(); save(AssetWarrantyEntity(assetId = assetId, name = name.trim(), type = type, providerName = provider.clean(), startDateEpochDay = start.toEpochDay(), endDateEpochDay = end.toEpochDay(), phone = phone.clean(), website = website.clean(), notes = notes.clean(), createdAt = now, updatedAt = now)) } }) { Text("Save") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } }); pick?.let { p -> SpendWiseDatePickerDialog(if (p == "start") start else end, { if (p == "start") start = it else end = it; pick = null }, { pick = null }) } }
 
 @Composable private fun RuleDialog(asset: AssetEntity, dismiss: () -> Unit, save: (AssetMaintenanceRuleEntity) -> Unit) {
     var title by remember { mutableStateOf("") }
-    var trigger by remember { mutableStateOf(MaintenanceTriggerType.TIME) }
+    var trigger by remember { mutableStateOf(MaintenanceTriggerType.TIME_OR_MILEAGE) }
     var months by remember { mutableStateOf("") }
     var km by remember { mutableStateOf("") }
+    val triggerValues = listOf(MaintenanceTriggerType.TIME_OR_MILEAGE, MaintenanceTriggerType.MILEAGE, MaintenanceTriggerType.TIME)
+
     AlertDialog(onDismissRequest = dismiss, title = { Text("Maintenance schedule") },
         text = { Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Optional title ideas")
+            Text("Suggested maintenance", style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(listOf("Engine oil", "Oil filter", "Air filter", "Cabin filter", "Brakes", "Tires", "Battery", "Coolant", "Transmission service")) { suggestion ->
-                    TextButton(onClick = { title = suggestion }) { Text(suggestion) }
+                    OutlinedButton(onClick = { title = suggestion }) { Text(suggestion, maxLines = 1) }
                 }
             }
-            OutlinedTextField(title, { title = it }, label = { Text("Title") })
-            AssetEnumDropdown("Trigger", trigger, MaintenanceTriggerType.entries) { trigger = it }
-            if (trigger != MaintenanceTriggerType.MILEAGE) OutlinedTextField(months, { months = it.filter(Char::isDigit) }, label = { Text("Interval months") })
-            if (trigger != MaintenanceTriggerType.TIME) OutlinedTextField(km, { km = it.filter(Char::isDigit) }, label = { Text("Interval km") })
+            OutlinedTextField(title, { title = it }, label = { Text("Maintenance name") }, modifier = Modifier.fillMaxWidth())
+            AssetEnumDropdown("Repeat by", trigger, triggerValues) { trigger = it }
+            if (trigger != MaintenanceTriggerType.TIME) {
+                OutlinedTextField(km, { km = it.filter(Char::isDigit) }, label = { Text("Every (km)") }, modifier = Modifier.fillMaxWidth())
+                asset.currentMileageKm?.let { current ->
+                    Text("Start from current mileage: %,d km".format(current), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (trigger != MaintenanceTriggerType.MILEAGE) {
+                OutlinedTextField(months, { months = it.filter(Char::isDigit) }, label = { Text("Every (months)") }, modifier = Modifier.fillMaxWidth())
+            }
         } },
         confirmButton = { TextButton(onClick = {
             val m = months.toIntOrNull(); val k = km.toLongOrNull()
@@ -437,5 +496,10 @@ private fun String.clean() = trim().takeIf(String::isNotBlank)
 private fun minorToAssetInput(minor: Long): String = if (minor % 100 == 0L) (minor / 100).toString()
     else "${minor / 100}.${(minor % 100).toString().padStart(2, '0')}"
 private fun Enum<*>.label() = if (this is AssetDocumentType) displayTitle()
+    else if (this is MaintenanceTriggerType) when (this) {
+        MaintenanceTriggerType.MILEAGE -> "Distance"
+        MaintenanceTriggerType.TIME -> "Time"
+        MaintenanceTriggerType.TIME_OR_MILEAGE -> "Whichever comes first"
+    }
     else name.lowercase().split('_').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
 private fun MaintenanceDueResult.dueLabel(): String = when (triggerReason) { MaintenanceTriggerReason.MILEAGE -> remainingKm?.let { if (it < 0) "overdue by ${-it} km" else "due in $it km" } ?: "Mileage unavailable"; else -> remainingDays?.let { if (it < 0) "overdue by ${-it} days" else "due in $it days" } ?: "Date unavailable" }
