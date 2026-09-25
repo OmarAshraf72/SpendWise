@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
         AssetCheckpointEntity::class, AssetCheckpointEventEntity::class,
         AssetReminderRuleEntity::class, AssetNotificationDeliveryEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(
@@ -52,7 +52,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 "spendwise.db"
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -518,6 +518,12 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                     FOREIGN KEY(maintenanceEventId) REFERENCES asset_maintenance_events(id) ON UPDATE NO ACTION ON DELETE CASCADE,
                     FOREIGN KEY(assetDocumentId) REFERENCES asset_documents(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
                 db.execSQL("CREATE INDEX index_asset_maintenance_document_links_assetDocumentId ON asset_maintenance_document_links (assetDocumentId)")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE asset_maintenance_rules ADD COLUMN kind TEXT NOT NULL DEFAULT 'MAINTENANCE_ITEM'")
             }
         }
     }

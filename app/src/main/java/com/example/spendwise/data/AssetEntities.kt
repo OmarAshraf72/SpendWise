@@ -1,6 +1,7 @@
 package com.example.spendwise.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -10,6 +11,7 @@ enum class AssetType { VEHICLE, PHONE, COMPUTER, TABLET, ELECTRONICS, APPLIANCE,
 enum class AssetIdentifierType { SERIAL_NUMBER, IMEI, VIN, OTHER }
 enum class AssetWarrantyType { MANUFACTURER, SELLER, EXTENDED, OTHER }
 enum class MaintenanceTriggerType { TIME, MILEAGE, TIME_OR_MILEAGE }
+enum class MaintenanceRuleKind { SERVICE_SCHEDULE, MAINTENANCE_ITEM }
 enum class AssetCommitmentRelationType { FINANCING, INSURANCE, OTHER }
 enum class AssetTransactionRelationType { PURCHASE, MAINTENANCE, REPAIR, INSURANCE, FUEL, OTHER }
 enum class AssetDocumentType { INVOICE, WARRANTY_CARD, PURCHASE_CONTRACT, SERVICE_RECEIPT, INSURANCE, REGISTRATION, OTHER }
@@ -88,7 +90,8 @@ data class AssetMaintenanceRuleEntity(
     val isActive: Boolean = true,
     val notes: String?,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    @ColumnInfo(defaultValue = "'MAINTENANCE_ITEM'") val kind: MaintenanceRuleKind = MaintenanceRuleKind.MAINTENANCE_ITEM
 )
 
 @Entity(
@@ -176,6 +179,8 @@ class AssetConverters {
     @TypeConverter fun warrantyType(v: String) = AssetWarrantyType.valueOf(v)
     @TypeConverter fun triggerType(v: MaintenanceTriggerType) = v.name
     @TypeConverter fun triggerType(v: String) = MaintenanceTriggerType.valueOf(v)
+    @TypeConverter fun ruleKind(v: MaintenanceRuleKind) = v.name
+    @TypeConverter fun ruleKind(v: String) = MaintenanceRuleKind.valueOf(v)
     @TypeConverter fun commitmentRelation(v: AssetCommitmentRelationType) = v.name
     @TypeConverter fun commitmentRelation(v: String) = AssetCommitmentRelationType.valueOf(v)
     @TypeConverter fun transactionRelation(v: AssetTransactionRelationType) = v.name

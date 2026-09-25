@@ -16,6 +16,48 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AssetMaintenancePersistenceInstrumentedTest {
+    @Test fun scheduledAndIndividualRulesPersistTogetherWithUnifiedHistory() { runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val name = "maintenance-paths-${UUID.randomUUID()}"
+        val db = Room.databaseBuilder(context, SpendWiseDatabase::class.java, name).build()
+        try { withContext(Dispatchers.IO) {
+            val repo = AssetRepository(db)
+            val assetId = repo.create(NewAssetInput(AssetEntity(name = "Car", type = AssetType.VEHICLE,
+                brand = null, model = null, purchaseDateEpochDay = null, purchasePriceMinor = null,
+                sellerMerchantId = null, currentMileageKm = 110_000, notes = null, createdAt = 1, updatedAt = 1)))
+            fun rule(title: String, kind: MaintenanceRuleKind) = AssetMaintenanceRuleEntity(
+                assetId = assetId, title = title, triggerType = MaintenanceTriggerType.MILEAGE,
+                intervalMonths = null, intervalKm = 10_000, baselineDateEpochDay = null,
+                baselineMileageKm = 110_000, warningDays = 30, warningKm = 1_000,
+                notes = null, createdAt = 1, updatedAt = 1, kind = kind)
+            val serviceId = repo.saveRule(rule("Dealer service", MaintenanceRuleKind.SERVICE_SCHEDULE))
+            val itemId = repo.saveRule(rule("Battery", MaintenanceRuleKind.MAINTENANCE_ITEM))
+            val performed = LocalDate.of(2026, 9, 25)
+            val first = MaintenanceEventInput(assetId, serviceId, "Dealer service", performed,
+                121_250, 450_000, null, "Dealer", null, false, null, "service-once")
+            val eventId = repo.completeMaintenance(first)
+            assertEquals(eventId, repo.completeMaintenance(first))
+            val itemEventId = repo.completeMaintenance(MaintenanceEventInput(assetId, itemId,
+                "Battery", performed.plusDays(1), 121_300, null, null, null, null, false, null, "battery-once"))
+            val events = db.assetDao().observeMaintenanceEvents().first()
+            assertEquals(2, events.size)
+            assertEquals(setOf(serviceId, itemId), events.mapNotNull { it.maintenanceRuleId }.toSet())
+            assertEquals(setOf("Dealer service", "Battery"), events.map { it.title }.toSet())
+            assertEquals(131_250L, MaintenanceDueCalculator.calculate(db.assetDao().getRule(serviceId)!!,
+                performed, 121_300, events.single { it.id == eventId }).nextDueMileageKm)
+            assertEquals(120_000L, MaintenanceDueCalculator.calculate(db.assetDao().getRule(itemId)!!,
+                performed, 121_250, null).nextDueMileageKm)
+            assertTrue(db.transactionDao().observeTransactions().first().isEmpty())
+            db.close()
+            val reopened = Room.databaseBuilder(context, SpendWiseDatabase::class.java, name).build()
+            try {
+                assertEquals(MaintenanceRuleKind.SERVICE_SCHEDULE, reopened.assetDao().getRule(serviceId)!!.kind)
+                assertEquals(MaintenanceRuleKind.MAINTENANCE_ITEM, reopened.assetDao().getRule(itemId)!!.kind)
+                assertEquals(setOf(eventId, itemEventId), reopened.assetDao().observeMaintenanceEvents().first().map { it.id }.toSet())
+            } finally { reopened.close() }
+        } } finally { db.close(); context.deleteDatabase(name) }
+    } }
+
     @Test fun completionKeepsHistoryLinksDocumentsAndCreatesAtMostOneExpense() { runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val databaseName = "asset-maintenance-persistence-${UUID.randomUUID()}"

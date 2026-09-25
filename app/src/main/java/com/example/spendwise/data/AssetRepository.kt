@@ -160,6 +160,7 @@ class AssetRepository(private val database: SpendWiseDatabase) {
         if (rule.id == 0L) dao.insertRule(rule.copy(title = rule.title.trim())) else {
             val previous = requireNotNull(dao.getRule(rule.id))
             require(previous.assetId == rule.assetId)
+            require(previous.kind == rule.kind)
             dao.updateRule(rule.copy(title = rule.title.trim(), createdAt = previous.createdAt, updatedAt = System.currentTimeMillis()))
             rule.id
         }

@@ -276,11 +276,14 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
         item { DetailSection("Warranty") { if (state.warranties.isEmpty()) Text("No warranties") else state.warranties.forEach { warranty -> Text("${warranty.name}: ${WarrantyCalculator.remainingLabel(LocalDate.ofEpochDay(warranty.endDateEpochDay), LocalDate.now())}"); state.attention.firstOrNull { it.sourceType == AssetAttentionSource.WARRANTY && it.sourceId == warranty.id }?.let { item -> TextButton(onClick = { reminderTarget = item }) { Text("Reminders") } } }; TextButton(onClick = { dialog = "warranty" }) { Text("Add warranty") } } }
         item { DetailSection("Financing") { if (state.linkedCommitments.isEmpty()) Text("No linked commitments") else state.linkedCommitments.forEach { (link, commitment) -> TextButton(onClick = { onCommitment(commitment.commitment.id) }) { Text("${link.relationType.label()}: ${commitment.commitment.title} · ${formatEgp(commitment.commitment.amountMinor)}") } }; TextButton(onClick = { dialog = "link" }) { Text("Link commitment") } } }
         item { DetailSection("Maintenance") {
-            val relevant = state.rules.maxWithOrNull(compareBy<AssetMaintenanceRuleEntity> { state.dueByRule[it.id]?.status?.ordinal ?: -1 }
-                .thenBy { -(state.dueByRule[it.id]?.remainingDays ?: Long.MAX_VALUE) })
-            if (relevant == null) Text("No maintenance plan") else {
-                Text(relevant.title, fontWeight = FontWeight.SemiBold)
-                state.dueByRule[relevant.id]?.let { due ->
+            val priority = compareBy<AssetMaintenanceRuleEntity> { state.dueByRule[it.id]?.status?.ordinal ?: -1 }
+                .thenBy { -(state.dueByRule[it.id]?.remainingDays ?: Long.MAX_VALUE) }
+            val relevant = MaintenanceRuleKind.entries.mapNotNull { kind ->
+                state.rules.filter { it.isActive && it.kind == kind }.maxWithOrNull(priority)
+            }
+            if (relevant.isEmpty()) Text("No maintenance plan") else relevant.forEach { rule ->
+                Text(rule.title, fontWeight = FontWeight.SemiBold)
+                state.dueByRule[rule.id]?.let { due ->
                     val nextDueText = buildString {
                         if (due.nextDueMileageKm != null) append("Next at %,d km".format(due.nextDueMileageKm))
                         else if (due.nextDueDate != null) append("Next on ${due.nextDueDate.format(assetDateFormatter)}")
@@ -299,13 +302,13 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
                     }
                     Text(statusText, color = statusColor)
                 }
-                state.attention.firstOrNull { it.sourceType == AssetAttentionSource.MAINTENANCE && it.sourceId == relevant.id }?.let { item ->
+                state.attention.firstOrNull { it.sourceType == AssetAttentionSource.MAINTENANCE && it.sourceId == rule.id }?.let { item ->
                     TextButton(onClick = { reminderTarget = item }) { Text("Reminders") }
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (relevant != null) TextButton(onClick = { onMaintenance(asset.id, true, relevant.id) }) { Text("Mark as done", maxLines = 1) }
-                TextButton(onClick = { onMaintenance(asset.id, false, null) }) { Text(if (relevant == null) "Set up maintenance" else "View maintenance", maxLines = 1) }
+                if (relevant.isNotEmpty()) TextButton(onClick = { onMaintenance(asset.id, true, relevant.first().id) }) { Text("Mark as done", maxLines = 1) }
+                TextButton(onClick = { onMaintenance(asset.id, false, null) }) { Text(if (relevant.isEmpty()) "Set up maintenance" else "View maintenance", maxLines = 1) }
             }
         } }
         item { DetailSection("Checkpoints") {
