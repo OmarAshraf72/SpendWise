@@ -7,8 +7,12 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoryDao {
+    @Query("SELECT * FROM categories WHERE id = :id LIMIT 1")
+    suspend fun getCategory(id: Long): CategoryEntity?
     @Query("SELECT * FROM categories WHERE isArchived = 0 ORDER BY id ASC")
     fun observeCategories(): Flow<List<CategoryEntity>>
+    @Query("SELECT * FROM categories ORDER BY id ASC")
+    fun observeAllCategories(): Flow<List<CategoryEntity>>
 
     @Query("SELECT * FROM categories WHERE isArchived = 0 ORDER BY id ASC")
     suspend fun getActiveCategories(): List<CategoryEntity>

@@ -2,6 +2,7 @@ package com.example.spendwise.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.example.spendwise.data.CategoryRepository
@@ -17,6 +18,7 @@ import com.example.spendwise.data.categoriesAreActive
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -137,4 +139,11 @@ class TransactionsViewModel(application: Application) : AndroidViewModel(applica
             onSaved()
         }
     }
+}
+
+class TransactionDetailViewModel(application: Application, savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
+    private val transactionId: Long = checkNotNull(savedStateHandle["transactionId"])
+    val transaction = TransactionRepository(SpendWiseDatabase.getInstance(application).transactionDao()).transactions
+        .map { rows -> rows.firstOrNull { it.transaction.id == transactionId } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }

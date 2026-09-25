@@ -17,14 +17,14 @@ import kotlinx.coroutines.launch
         CategoryEntity::class, TransactionEntity::class, ItemCategoryMappingEntity::class, MerchantEntity::class,
         FinancialCommitmentEntity::class, CommitmentOccurrenceOverrideEntity::class,
         DebtProfileEntity::class, DebtPaymentEntity::class, FinancingTermsEntity::class, LatePaymentRuleEntity::class
-        , AssetEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
+        , AssetEntity::class, CustomAssetTypeEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
         AssetMaintenanceRuleEntity::class, AssetMaintenanceEventEntity::class, AssetDocumentEntity::class,
         AssetMaintenanceDocumentLinkEntity::class,
         AssetCommitmentLinkEntity::class, AssetTransactionLinkEntity::class,
         AssetCheckpointEntity::class, AssetCheckpointEventEntity::class,
         AssetReminderRuleEntity::class, AssetNotificationDeliveryEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(
@@ -52,7 +52,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 "spendwise.db"
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -524,6 +524,24 @@ abstract class SpendWiseDatabase : RoomDatabase() {
         val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE asset_maintenance_rules ADD COLUMN kind TEXT NOT NULL DEFAULT 'MAINTENANCE_ITEM'")
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS custom_asset_types (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    name TEXT NOT NULL,
+                    normalizedName TEXT NOT NULL,
+                    isArchived INTEGER NOT NULL DEFAULT 0,
+                    createdAt INTEGER NOT NULL)""".trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX index_custom_asset_types_normalizedName ON custom_asset_types (normalizedName)")
+                db.execSQL("ALTER TABLE assets ADD COLUMN customTypeId INTEGER")
+                db.execSQL("ALTER TABLE assets ADD COLUMN categoryId INTEGER")
+                db.execSQL("ALTER TABLE assets ADD COLUMN ownershipStatus TEXT NOT NULL DEFAULT 'OWNED'")
+                db.execSQL("CREATE INDEX index_assets_customTypeId ON assets (customTypeId)")
+                db.execSQL("CREATE INDEX index_assets_categoryId ON assets (categoryId)")
+                db.execSQL("CREATE INDEX index_assets_ownershipStatus ON assets (ownershipStatus)")
             }
         }
     }

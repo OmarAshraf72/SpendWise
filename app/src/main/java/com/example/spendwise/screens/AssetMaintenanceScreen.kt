@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -94,36 +93,86 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
                 }
             }
         } else {
-            item { Text("Upcoming", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
-            for (kind in MaintenanceRuleKind.entries) {
+            item { Text("Upcoming maintenance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+            val activeServices = state.rules.filter { it.isActive && it.kind == MaintenanceRuleKind.SERVICE_SCHEDULE }
+            val activeItems = state.rules.filter { it.isActive && it.kind == MaintenanceRuleKind.MAINTENANCE_ITEM }
+
+            if (activeServices.isEmpty() && activeItems.isEmpty()) {
                 item {
-                    MaintenanceSection(if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "Scheduled services" else "Tracked maintenance") {
-                        val active = state.rules.filter { it.isActive && it.kind == kind }
-                        if (active.isEmpty()) Text("Nothing tracked yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        active.forEach { rule ->
-                            val due = state.dueByRule[rule.id]
-                            Text(rule.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text(buildString {
-                                if (due?.nextDueMileageKm != null) append("Next at %,d km".format(due.nextDueMileageKm))
-                                if (due?.nextDueMileageKm != null && due.nextDueDate != null) append(" · ")
-                                if (due?.nextDueDate != null) append("Next on ${due.nextDueDate.format(maintenanceDateFormat)}")
-                                if (isEmpty()) append("Next due unavailable")
-                            })
-                            due?.let {
-                                Text(when (it.status) {
-                                    MaintenanceDueStatus.OVERDUE -> "Overdue"
-                                    MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> "Due soon"
-                                    MaintenanceDueStatus.OK -> "On track"
-                                }, style = MaterialTheme.typography.labelMedium,
-                                    color = if (it.status == MaintenanceDueStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("No upcoming maintenance", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedButton(onClick = { choosingKind = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                Text("Add maintenance")
                             }
-                            TextButton(onClick = { completingRule = rule; completing = true }) { Text("Mark as done") }
-                            HorizontalDivider()
+                        }
+                    }
+                }
+            } else {
+                if (activeServices.isNotEmpty()) {
+                    item {
+                        MaintenanceSection("Scheduled services") {
+                            activeServices.forEach { rule ->
+                                val due = state.dueByRule[rule.id]
+                                Text(rule.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                val nextDueText = buildString {
+                                    if (due?.nextDueMileageKm != null) append("Next at %,d km".format(due.nextDueMileageKm))
+                                    else if (due?.nextDueDate != null) {
+                                        if (due.remainingDays != null && due.remainingDays >= 0 && due.remainingDays <= 30) {
+                                            append("Due in ${due.remainingDays} days")
+                                        } else {
+                                            append("Next on ${due.nextDueDate.format(maintenanceDateFormat)}")
+                                        }
+                                    } else append("Next due unavailable")
+                                }
+                                Text(nextDueText, style = MaterialTheme.typography.bodyMedium)
+                                due?.let {
+                                    Text(when (it.status) {
+                                        MaintenanceDueStatus.OVERDUE -> "Overdue"
+                                        MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> "Due soon"
+                                        MaintenanceDueStatus.OK -> "On track"
+                                    }, style = MaterialTheme.typography.labelMedium,
+                                        color = if (it.status == MaintenanceDueStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                                }
+                                TextButton(onClick = { completingRule = rule; completing = true }) { Text("Mark as done") }
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+                if (activeItems.isNotEmpty()) {
+                    item {
+                        MaintenanceSection("Maintenance items") {
+                            activeItems.forEach { rule ->
+                                val due = state.dueByRule[rule.id]
+                                Text(rule.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                val nextDueText = buildString {
+                                    if (due?.nextDueMileageKm != null) append("Next at %,d km".format(due.nextDueMileageKm))
+                                    else if (due?.nextDueDate != null) {
+                                        if (due.remainingDays != null && due.remainingDays >= 0 && due.remainingDays <= 30) {
+                                            append("Due in ${due.remainingDays} days")
+                                        } else {
+                                            append("Next on ${due.nextDueDate.format(maintenanceDateFormat)}")
+                                        }
+                                    } else append("Next due unavailable")
+                                }
+                                Text(nextDueText, style = MaterialTheme.typography.bodyMedium)
+                                due?.let {
+                                    Text(when (it.status) {
+                                        MaintenanceDueStatus.OVERDUE -> "Overdue"
+                                        MaintenanceDueStatus.DUE, MaintenanceDueStatus.DUE_SOON -> "Due soon"
+                                        MaintenanceDueStatus.OK -> "On track"
+                                    }, style = MaterialTheme.typography.labelMedium,
+                                        color = if (it.status == MaintenanceDueStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                                }
+                                TextButton(onClick = { completingRule = rule; completing = true }) { Text("Mark as done") }
+                                HorizontalDivider()
+                            }
                         }
                     }
                 }
             }
-            item { TextButton(onClick = { completingRule = null; completing = true }, Modifier.fillMaxWidth()) { Text("+ Record other maintenance") } }
+            item { TextButton(onClick = { completingRule = null; completing = true }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("+ Record other maintenance") } }
             item { OutlinedButton(onClick = { choosingKind = true }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Add maintenance") } }
         item { Text("History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
         if (state.events.isEmpty()) item { Text("No completed maintenance yet", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -164,18 +213,21 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
         }
     }
     if (choosingKind) AlertDialog(onDismissRequest = { choosingKind = false },
-        title = { Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("How do you want to track maintenance?", Modifier.weight(1f))
-            IconButton(onClick = { showingKindInfo = true }) { Icon(Icons.Outlined.Info, "About maintenance options") }
-        } },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { addingKind = MaintenanceRuleKind.SERVICE_SCHEDULE; choosingKind = false }, Modifier.fillMaxWidth()) {
-                Column { Text("Scheduled services"); Text("Follow a dealer or service-center schedule.", style = MaterialTheme.typography.bodySmall) }
+        title = { Text("What do you want to add?") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { addingKind = MaintenanceRuleKind.SERVICE_SCHEDULE; choosingKind = false }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalAlignment = Alignment.Start) {
+                    Text("Scheduled service", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("A full service you want to repeat by time or mileage.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            OutlinedButton(onClick = { addingKind = MaintenanceRuleKind.MAINTENANCE_ITEM; choosingKind = false }, Modifier.fillMaxWidth()) {
-                Column { Text("Track individual items"); Text("Track oil, filters, brakes, tires or battery.", style = MaterialTheme.typography.bodySmall) }
+            OutlinedButton(onClick = { addingKind = MaintenanceRuleKind.MAINTENANCE_ITEM; choosingKind = false }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalAlignment = Alignment.Start) {
+                    Text("Maintenance item", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("An individual item such as engine oil, air filter, tires, brakes or battery.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        } }, confirmButton = { TextButton(onClick = { choosingKind = false }) { Text("Close") } })
+        } }, confirmButton = { TextButton(onClick = { choosingKind = false }) { Text("Cancel") } })
     if (showingKindInfo) AlertDialog(onDismissRequest = { showingKindInfo = false }, title = { Text("Maintenance options") },
         text = { Text("Scheduled services track your next dealer or service-center visit, cost and invoice. Individual items track specific work such as oil, brakes, tires and battery. You can use both for the same vehicle.") },
         confirmButton = { TextButton(onClick = { showingKindInfo = false }) { Text("Got it") } })
@@ -209,7 +261,9 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
     dismiss: () -> Unit,
     save: (AssetMaintenanceRuleEntity) -> Unit
 ) {
-    var title by remember(existing?.id, kind) { mutableStateOf(existing?.title ?: if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "Dealer service" else "") }
+    var title by remember(existing?.id, kind) {
+        mutableStateOf(existing?.title ?: if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "120,000 km service" else "")
+    }
     var trigger by remember(existing?.id) { mutableStateOf(existing?.triggerType ?: MaintenanceTriggerType.TIME_OR_MILEAGE) }
     var months by remember(existing?.id) { mutableStateOf(existing?.intervalMonths?.toString().orEmpty()) }
     var km by remember(existing?.id) { mutableStateOf(existing?.intervalKm?.toString().orEmpty()) }
@@ -230,7 +284,7 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
 
     AlertDialog(
         onDismissRequest = dismiss,
-        title = { Text(if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "Scheduled service" else "What needs maintenance?") },
+        title = { Text(if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) (if (existing == null) "Scheduled service" else "Edit scheduled service") else (if (existing == null) "Maintenance item" else "Edit maintenance item")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (kind == MaintenanceRuleKind.MAINTENANCE_ITEM) {
@@ -243,8 +297,8 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
                 }
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
-                    label = { Text(if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "Name" else "Maintenance item") },
-                    placeholder = { Text(if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "e.g. Dealer service" else "e.g. Air filter") },
+                    label = { Text("Name") },
+                    placeholder = { Text(if (kind == MaintenanceRuleKind.SERVICE_SCHEDULE) "e.g. 120,000 km service" else "e.g. Air filter") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -260,18 +314,21 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text(if (asset.currentMileageKm != null) "Start from current mileage: %,d km".format(asset.currentMileageKm)
-                        else "Enter a starting mileage in Advanced settings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val startKm = baselineKm.toLongOrNull() ?: asset.currentMileageKm
+                    startKm?.let { current ->
+                        Text("Starts from %,d km".format(current), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 if (trigger != MaintenanceTriggerType.MILEAGE) {
                     OutlinedTextField(
                         value = months, onValueChange = { months = it.filter(Char::isDigit) },
                         label = { Text("Every (months)") },
-                        placeholder = { Text("6") },
+                        placeholder = { Text("12") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Text("Starts from ${baselineDate.format(maintenanceDateFormat)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 OutlinedTextField(
                     value = notes, onValueChange = { notes = it },
@@ -289,13 +346,13 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
                 if (showAdvanced) {
                     if (trigger != MaintenanceTriggerType.MILEAGE) {
                         OutlinedButton(onClick = { pickingDate = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Baseline date: ${baselineDate.format(maintenanceDateFormat)}")
+                            Text("Start date: ${baselineDate.format(maintenanceDateFormat)}")
                         }
                     }
                     if (trigger != MaintenanceTriggerType.TIME) {
                         OutlinedTextField(
                             value = baselineKm, onValueChange = { baselineKm = it.filter(Char::isDigit) },
-                            label = { Text("Baseline mileage (km)") },
+                            label = { Text("Start mileage (km)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -309,11 +366,11 @@ fun AssetMaintenanceScreen(onBack: () -> Unit, openCompletion: Boolean = false, 
             TextButton(onClick = {
                 val m = months.toIntOrNull()
                 val k = km.toLongOrNull()
-                val base = baselineKm.toLongOrNull()
+                val base = baselineKm.toLongOrNull() ?: asset.currentMileageKm
                 if (title.isBlank() || (trigger != MaintenanceTriggerType.MILEAGE && (m == null || m <= 0)) ||
                     (trigger != MaintenanceTriggerType.TIME && (k == null || k <= 0)) ||
                     (trigger != MaintenanceTriggerType.TIME && base == null)) {
-                    error = "Enter a name, valid interval and starting mileage where needed"
+                    error = "Enter a name, valid interval and starting mileage"
                 } else {
                     save(AssetMaintenanceRuleEntity(
                         id = existing?.id ?: 0, assetId = asset.id, title = title.trim(), triggerType = trigger,

@@ -324,9 +324,10 @@ fun AddCommitmentScreen(
 @Composable private fun MerchantField(query: String, onQuery: (String) -> Unit, focused: Boolean, onFocus: (Boolean) -> Unit, suggestions: List<MerchantSuggestion>, onSelect: (MerchantEntity) -> Unit, onAdd: () -> Unit) {
     OutlinedTextField(query, onQuery, label = { Text("Merchant (optional)") }, placeholder = { Text("Search merchant") }, singleLine = true, modifier = Modifier.fillMaxWidth().onFocusChanged { onFocus(it.isFocused) })
     if (focused) InlineSuggestionList(
-        suggestions.take(5).map { InlineSuggestion(it.merchant.id, it.merchant, it.merchant.displayName) }, onSelected = onSelect,
+        suggestions.map { InlineSuggestion(it.merchant.id, it.merchant, it.merchant.displayName) }, onSelected = onSelect,
         addLabel = if (shouldOfferNewMerchant(query, suggestions)) "Add “${query.trim()}”" else null,
-        onAdd = if (shouldOfferNewMerchant(query, suggestions)) onAdd else null
+        onAdd = if (shouldOfferNewMerchant(query, suggestions)) onAdd else null,
+        emptyMessage = if (query.isNotBlank() && suggestions.isEmpty()) "No matching merchants" else null
     )
 }
 

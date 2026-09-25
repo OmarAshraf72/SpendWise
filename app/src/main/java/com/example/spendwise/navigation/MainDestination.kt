@@ -38,7 +38,7 @@ enum class MainDestination(
     Transactions("TRANSACTIONS", "transactions", "Transactions", true, true, 1, SecondaryVisibility.WHEN_UNPINNED),
     Commitments("COMMITMENTS", "commitments", "Commitments", true, true, 2, SecondaryVisibility.WHEN_UNPINNED),
     Analytics("ANALYTICS", "analytics", "Analytics", true, true, 3, SecondaryVisibility.WHEN_UNPINNED),
-    Assets("ASSETS", "assets", "My Assets", true, true, 4, SecondaryVisibility.WHEN_UNPINNED),
+    Assets("ASSETS", "assets", "My Items", true, true, 4, SecondaryVisibility.WHEN_UNPINNED),
     More("MORE", "more", "More", true, false, 5, SecondaryVisibility.GLOBAL_ACTION),
     Categories("CATEGORIES", "categories", "Categories", true, false, 6, SecondaryVisibility.WHEN_UNPINNED),
     Settings("SETTINGS", "settings", "Settings", false, false, 7, SecondaryVisibility.GLOBAL_ACTION);

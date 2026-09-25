@@ -9,6 +9,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AssetDao {
+    @Query("SELECT * FROM custom_asset_types WHERE isArchived = 0 ORDER BY name COLLATE NOCASE")
+    fun observeCustomTypes(): Flow<List<CustomAssetTypeEntity>>
+    @Query("SELECT * FROM custom_asset_types ORDER BY name COLLATE NOCASE")
+    fun observeAllCustomTypes(): Flow<List<CustomAssetTypeEntity>>
+    @Query("SELECT * FROM custom_asset_types WHERE id = :id LIMIT 1")
+    suspend fun getCustomType(id: Long): CustomAssetTypeEntity?
+    @Query("SELECT * FROM custom_asset_types WHERE normalizedName = :normalizedName LIMIT 1")
+    suspend fun getCustomTypeByName(normalizedName: String): CustomAssetTypeEntity?
+    @Insert suspend fun insertCustomType(type: CustomAssetTypeEntity): Long
+    @Query("UPDATE custom_asset_types SET isArchived = 1 WHERE id = :id")
+    suspend fun archiveCustomType(id: Long)
+    @Query("UPDATE custom_asset_types SET isArchived = 0 WHERE id = :id")
+    suspend fun restoreCustomType(id: Long)
     @Query("SELECT * FROM assets WHERE isArchived = 0 ORDER BY updatedAt DESC, name ASC")
     fun observeActiveAssets(): Flow<List<AssetEntity>>
 

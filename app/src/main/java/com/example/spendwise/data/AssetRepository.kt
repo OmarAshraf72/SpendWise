@@ -28,7 +28,9 @@ data class NewAssetInput(
     val asset: AssetEntity,
     val identifiers: List<AssetIdentifierEntity> = emptyList(),
     val warranty: AssetWarrantyEntity? = null,
-    val commitmentId: Long? = null
+    val commitmentId: Long? = null,
+    val purchaseTransactionId: Long? = null,
+    val sellerName: String? = null
 )
 
 data class PendingAssetDocument(
@@ -49,6 +51,7 @@ object PendingAssetDocumentDraftLogic {
 }
 
 fun AssetDocumentType.displayTitle(): String = when (this) {
+    AssetDocumentType.RECEIPT -> "Receipt"
     AssetDocumentType.INVOICE -> "Purchase invoice"
     AssetDocumentType.WARRANTY_CARD -> "Warranty card"
     AssetDocumentType.PURCHASE_CONTRACT -> "Purchase contract"
@@ -98,6 +101,33 @@ class AssetRepository(private val database: SpendWiseDatabase) {
     }
 
     fun observeAsset(id: Long) = dao.observeAsset(id)
+    val customTypes = dao.observeCustomTypes()
+
+    suspend fun createCustomType(name: String): Long = database.withTransaction {
+        val cleaned = name.trim().replace(Regex("\\s+"), " ")
+        val normalized = normalizeCustomAssetTypeName(cleaned)
+        require(normalized.isNotBlank()) { "Enter an item type name" }
+        val existing = dao.getCustomTypeByName(normalized)
+        require(existing == null || existing.isArchived) { "This item type already exists" }
+        if (existing != null) {
+            dao.restoreCustomType(existing.id)
+            existing.id
+        } else dao.insertCustomType(CustomAssetTypeEntity(name = cleaned, normalizedName = normalized,
+            createdAt = System.currentTimeMillis()))
+    }
+
+    suspend fun archiveCustomType(id: Long) = database.withTransaction {
+        requireNotNull(dao.getCustomType(id))
+        dao.archiveCustomType(id)
+    }
+
+    suspend fun setOwnershipStatus(assetId: Long, status: OwnershipStatus) = database.withTransaction {
+        val existing = requireNotNull(dao.getAsset(assetId))
+        dao.updateAsset(existing.copy(ownershipStatus = status, updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun purchasePrefill(transactionId: Long): AssetPurchasePrefill? =
+        database.transactionDao().getTransactionWithCategory(transactionId)?.let(::assetPurchasePrefill)
 
     suspend fun loadForEdit(id: Long): AssetEditSnapshot? = dao.getAsset(id)?.let { asset ->
         AssetEditSnapshot(asset, dao.getIdentifiersForAsset(id), dao.getWarrantiesForAsset(id), dao.getCommitmentLinksForAsset(id))
@@ -121,9 +151,25 @@ class AssetRepository(private val database: SpendWiseDatabase) {
         promoted: List<StoredAssetDocument>
     ): Long {
         require(input.asset.name.isNotBlank())
-        val assetId = if (input.asset.id == 0L) dao.insertAsset(input.asset) else {
+        input.asset.customTypeId?.let { typeId ->
+            require(input.asset.type == AssetType.OTHER)
+            val selected = requireNotNull(dao.getCustomType(typeId))
+            require(!selected.isArchived || input.asset.id != 0L && dao.getAsset(input.asset.id)?.customTypeId == typeId)
+        }
+        input.asset.categoryId?.let { categoryId ->
+            val selected = requireNotNull(database.categoryDao().getCategory(categoryId))
+            require(!selected.isArchived || input.asset.id != 0L && dao.getAsset(input.asset.id)?.categoryId == categoryId)
+        }
+        val purchase = input.purchaseTransactionId?.let { id ->
+            requireNotNull(database.transactionDao().getTransactionWithCategory(id)?.transaction)
+                .also { require(it.type == TransactionType.EXPENSE && it.purchaseGroupId == null) }
+        }
+        val resolvedSellerId = input.asset.sellerMerchantId ?: input.sellerName?.takeIf(String::isNotBlank)
+            ?.let { MerchantRepository(database.merchantDao()).createIfMissing(it, System.currentTimeMillis())?.id }
+        val assetToSave = input.asset.copy(sellerMerchantId = resolvedSellerId)
+        val assetId = if (input.asset.id == 0L) dao.insertAsset(assetToSave) else {
             requireNotNull(dao.getAsset(input.asset.id))
-            dao.updateAsset(input.asset)
+            dao.updateAsset(assetToSave)
             input.asset.id
         }
         if (input.asset.id != 0L) dao.deleteIdentifiersForAsset(assetId)
@@ -137,6 +183,7 @@ class AssetRepository(private val database: SpendWiseDatabase) {
             }
         }
         input.commitmentId?.let { dao.linkCommitment(AssetCommitmentLinkEntity(assetId, it, AssetCommitmentRelationType.FINANCING)) }
+        purchase?.let { dao.linkTransaction(AssetTransactionLinkEntity(assetId, it.id, AssetTransactionRelationType.PURCHASE)) }
         pendingDocuments.zip(promoted).forEach { (draft, stored) ->
             dao.insertDocument(AssetDocumentEntity(
                 assetId = assetId, documentType = draft.documentType, title = draft.title,

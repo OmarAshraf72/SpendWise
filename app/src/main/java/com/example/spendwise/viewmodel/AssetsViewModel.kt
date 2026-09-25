@@ -31,6 +31,10 @@ data class AssetsUiState(val cards: List<AssetCardUi> = emptyList(), val attenti
 class AssetsViewModel(application: Application) : AndroidViewModel(application) {
     private val database = SpendWiseDatabase.getInstance(application)
     private val repository = AssetRepository(database)
+    val customTypes = database.assetDao().observeAllCustomTypes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val categories = database.categoryDao().observeAllCategories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val documentStorage = AssetDocumentStorage(application)
     private val draftId = UUID.randomUUID().toString()
     private val _pendingDocuments = MutableStateFlow<List<PendingAssetDocument>>(emptyList())
@@ -49,6 +53,15 @@ class AssetsViewModel(application: Application) : AndroidViewModel(application) 
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssetsUiState())
 
     suspend fun loadForEdit(id: Long): AssetEditSnapshot? = repository.loadForEdit(id)
+    suspend fun loadPurchasePrefill(id: Long): AssetPurchasePrefill? = repository.purchasePrefill(id)
+    fun createCustomType(name: String, done: (Long?, String?) -> Unit) = viewModelScope.launch {
+        runCatching { withContext(Dispatchers.IO) { repository.createCustomType(name) } }
+            .onSuccess { done(it, null) }.onFailure { done(null, it.message ?: "Could not add item type") }
+    }
+    fun archiveCustomType(id: Long, done: (String?) -> Unit) = viewModelScope.launch {
+        runCatching { withContext(Dispatchers.IO) { repository.archiveCustomType(id) } }
+            .onSuccess { done(null) }.onFailure { done(it.message ?: "Could not archive item type") }
+    }
 
     fun addPendingDocument(uri: Uri, type: AssetDocumentType, title: String, onResult: (String?) -> Unit) {
         if (_isStagingDocument.value) return
@@ -78,7 +91,7 @@ class AssetsViewModel(application: Application) : AndroidViewModel(application) 
                     withContext(Dispatchers.IO) { documentStorage.clearDraft(draftId) }
                     onSaved(id)
                 }
-                .onFailure { onError("Asset could not be saved. Check the details and try again.") }
+                .onFailure { onError("Item could not be saved. Check the details and try again.") }
         }
     }
 
@@ -104,7 +117,8 @@ data class AssetDetailUiState(
     val documents: List<AssetDocumentEntity> = emptyList(),
     val maintenanceDocumentIds: Set<Long> = emptySet(),
     val linkedCommitments: List<Pair<AssetCommitmentLinkEntity, CommitmentWithMerchant>> = emptyList(),
-    val dueByRule: Map<Long, MaintenanceDueResult> = emptyMap()
+    val dueByRule: Map<Long, MaintenanceDueResult> = emptyMap(),
+    val purchaseTransactionIds: List<Long> = emptyList()
 )
 
 class AssetDetailViewModel(application: Application, savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
@@ -112,6 +126,9 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     private val repository = AssetRepository(database)
     private val storage = AssetDocumentStorage(application)
     private val assetId: Long = checkNotNull(savedStateHandle["assetId"])
+    val customTypes = database.assetDao().observeAllCustomTypes().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val allCategories = database.categoryDao().observeAllCategories().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val transactions = database.transactionDao().observeTransactions().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val merchants = MerchantRepository(database.merchantDao()).merchants.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val categories = database.categoryDao().observeCategoriesForEntry().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val commitments = CommitmentRepository(database).data.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CommitmentData(emptyList(), emptyList()))
@@ -132,6 +149,7 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
             attention = AssetAttentionEngine.evaluate(data, today, assetId),
             documents = data.documents.filter { it.assetId == assetId },
             maintenanceDocumentIds = data.maintenanceDocumentLinks.mapTo(mutableSetOf()) { it.assetDocumentId },
+            purchaseTransactionIds = data.transactionLinks.filter { it.assetId == assetId && it.relationType == AssetTransactionRelationType.PURCHASE }.map { it.transactionId },
             linkedCommitments = data.commitmentLinks.filter { it.assetId == assetId }.mapNotNull { link ->
                 commitmentData.commitments.firstOrNull { it.commitment.id == link.commitmentId }?.let { link to it }
             },
@@ -176,6 +194,7 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     fun deleteDocument(id: Long) = viewModelScope.launch { repository.deleteDocument(id, storage) }
     fun renameDocument(id: Long, title: String) = viewModelScope.launch { repository.renameDocument(id, title) }
     fun archive(done: () -> Unit) = viewModelScope.launch { repository.archive(assetId); done() }
+    fun setOwnershipStatus(status: OwnershipStatus) = viewModelScope.launch { repository.setOwnershipStatus(assetId, status) }
 }
 
 data class MaintenanceUiState(

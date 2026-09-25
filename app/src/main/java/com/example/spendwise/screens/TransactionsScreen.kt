@@ -19,6 +19,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,7 @@ private data class TransactionDisplay(val rows: List<TransactionWithCategory>) {
 @Composable
 fun TransactionsScreen(
     onAddExpense: () -> Unit,
+    onAddToItems: (Long) -> Unit = {},
     viewModel: TransactionsViewModel = viewModel()
 ) {
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
@@ -90,7 +92,7 @@ fun TransactionsScreen(
                 item { EmptyTransactions(filter) }
             } else {
                 items(displayTransactions, key = TransactionDisplay::key) { item ->
-                    TransactionRow(item)
+                    TransactionRow(item, onAddToItems)
                 }
             }
         }
@@ -133,7 +135,7 @@ private fun EmptyTransactions(filter: TransactionFilter) {
 }
 
 @Composable
-private fun TransactionRow(item: TransactionDisplay) {
+private fun TransactionRow(item: TransactionDisplay, onAddToItems: (Long) -> Unit) {
     val transaction = item.first.transaction
     val isIncome = transaction.type == TransactionType.INCOME
     val isSplit = !isIncome && item.rows.size > 1 && transaction.purchaseGroupId != null
@@ -193,6 +195,9 @@ private fun TransactionRow(item: TransactionDisplay) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (!isIncome && transaction.purchaseGroupId == null) {
+                TextButton(onClick = { onAddToItems(transaction.id) }) { Text("Add to My Items") }
+            }
         }
     }
 }

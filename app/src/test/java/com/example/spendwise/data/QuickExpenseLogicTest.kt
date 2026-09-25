@@ -188,6 +188,8 @@ private class FakeMerchantDao : MerchantDao {
 
 private class FakeTransactionDao : TransactionDao {
     val rows = mutableListOf<TransactionEntity>()
+    override suspend fun getTransactionWithCategory(id: Long): TransactionWithCategory? =
+        rows.firstOrNull { it.id == id }?.let { TransactionWithCategory(it, null) }
     override fun observeTransactions(): Flow<List<TransactionWithCategory>> = flowOf(emptyList())
     override fun observeExpensesBetween(startInclusive: Long, endExclusive: Long): Flow<List<TransactionWithCategory>> = flowOf(emptyList())
     override fun observeTransactionsBetween(startInclusive: Long, endExclusive: Long): Flow<List<TransactionWithCategory>> = flowOf(emptyList())

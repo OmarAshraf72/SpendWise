@@ -78,10 +78,10 @@ fun HomeScreen(
 private fun AssetsAttentionCard(state: com.example.spendwise.viewmodel.AssetsUiState, onAssets: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Assets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("My Items", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("${state.attentionCount} thing${if (state.attentionCount == 1) "" else "s"} need attention")
             state.topAttention.forEach { Text("${it.assetName}: ${it.item.message}") }
-            TextButton(onClick = onAssets) { Text("View assets") }
+            TextButton(onClick = onAssets) { Text("View items") }
         }
     }
 }

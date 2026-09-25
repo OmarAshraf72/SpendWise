@@ -1,6 +1,7 @@
 package com.example.spendwise.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,8 +49,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.FilterChip
 import com.example.spendwise.data.CategoryEntity
 import com.example.spendwise.data.CategoryType
+import com.example.spendwise.data.SpendingPeriod
+import com.example.spendwise.data.formatEgp
 import com.example.spendwise.viewmodel.CategoriesViewModel
 
 private fun categoryIcon(iconName: String): ImageVector = when (iconName) {
@@ -68,7 +74,46 @@ private fun categoryIcon(iconName: String): ImageVector = when (iconName) {
 }
 
 @Composable
-fun CategoriesScreen(viewModel: CategoriesViewModel = viewModel()) {
+fun CategoriesScreen(onOpen: (Long, SpendingPeriod) -> Unit, onManage: () -> Unit, viewModel: CategoriesViewModel = viewModel()) {
+    val entries by viewModel.explorer.collectAsStateWithLifecycle()
+    val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 104.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Categories", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("Spending and things you own, together by category.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            items(SpendingPeriod.entries) { period ->
+                FilterChip(
+                    selected = period == selectedPeriod,
+                    onClick = { viewModel.setPeriod(period) },
+                    label = { Text(period.label, maxLines = 1) }
+                )
+            }
+        }
+
+        entries.forEach { entry ->
+            Card(Modifier.fillMaxWidth().clickable { onOpen(entry.category.id, selectedPeriod) }) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(categoryIcon(entry.category.iconName), contentDescription = null)
+                    Column(Modifier.weight(1f)) {
+                        Text(entry.category.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(formatEgp(entry.monthSpentMinor))
+                        Text("${entry.ownedItems.size} ${if (entry.ownedItems.size == 1) "item" else "items"}",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        TextButton(onClick = onManage) { Text("Manage categories") }
+    }
+}
+
+@Composable
+fun ManageCategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = viewModel()) {
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     var showEditor by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<CategoryEntity?>(null) }
@@ -83,8 +128,9 @@ fun CategoriesScreen(viewModel: CategoriesViewModel = viewModel()) {
                 .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 104.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            TextButton(onClick = onBack) { Text("Back to Categories") }
             Text(
-                text = "Categories",
+                text = "Manage categories",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
             )

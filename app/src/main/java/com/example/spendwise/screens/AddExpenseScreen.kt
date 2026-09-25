@@ -1,11 +1,15 @@
 package com.example.spendwise.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -48,10 +52,18 @@ fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = vie
     var splitEnabled by rememberSaveable { mutableStateOf(false) }
     var splits by remember { mutableStateOf(listOf(SplitDraft(1), SplitDraft(2))) }
     var nextSplitId by remember { mutableStateOf(3L) }
-    var categoryFocused by remember { mutableStateOf(false) }
-    var merchantFocused by remember { mutableStateOf(false) }
+    var categoryExpanded by rememberSaveable { mutableStateOf(false) }
+    var merchantExpanded by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var validationMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val pageScrollState = rememberScrollState()
+
+    BackHandler(enabled = merchantExpanded || categoryExpanded) {
+        merchantExpanded = false
+        categoryExpanded = false
+        focusManager.clearFocus()
+    }
 
     val totalMinor = parseEgpToMinor(amount)
     val splitInputs = splits.map { SplitExpenseInput(parseEgpToMinor(it.amount), it.categoryId, it.note) }
@@ -60,7 +72,11 @@ fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = vie
     LaunchedEffect(Unit) { amountFocus.requestFocus() }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(pageScrollState, enabled = !merchantExpanded && !categoryExpanded)
+            .imePadding()
+            .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Add Expense", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
@@ -74,16 +90,42 @@ fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = vie
 
         OutlinedTextField(
             value = merchant,
-            onValueChange = { merchant = it; viewModel.updateMerchantQuery(it) },
+            onValueChange = {
+                merchant = it
+                viewModel.updateMerchantQuery(it)
+                merchantExpanded = true
+                categoryExpanded = false
+            },
             label = { Text("Merchant") }, placeholder = { Text("Search merchant") },
+            trailingIcon = {
+                IconButton(onClick = {
+                    if (merchantExpanded) {
+                        merchantExpanded = false
+                        focusManager.clearFocus()
+                    } else {
+                        merchantExpanded = true
+                        categoryExpanded = false
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (merchantExpanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                        contentDescription = if (merchantExpanded) "Close merchant options" else "Open merchant options"
+                    )
+                }
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { merchantFocused = false; focusManager.clearFocus() }),
+            keyboardActions = KeyboardActions(onDone = { merchantExpanded = false; focusManager.clearFocus() }),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().onFocusChanged { merchantFocused = it.isFocused }
+            modifier = Modifier.fillMaxWidth().onFocusChanged {
+                if (it.isFocused) {
+                    merchantExpanded = true
+                    categoryExpanded = false
+                }
+            }
         )
-        if (merchantFocused) {
+        if (merchantExpanded) {
             InlineSuggestionList(
-                suggestions = merchantSuggestions.take(5).map { suggestion ->
+                suggestions = merchantSuggestions.map { suggestion ->
                     InlineSuggestion(suggestion.merchant.id, suggestion, suggestion.merchant.displayName,
                         suggestion.merchant.usageCount.takeIf { it > 0 }?.let { "Used $it times" })
                 },
@@ -95,17 +137,18 @@ fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = vie
                         categoryQuery = categories.firstOrNull { it.id == selectedCategoryId }?.name.orEmpty()
                     }
                     viewModel.updateMerchantQuery(merchant)
-                    merchantFocused = false
+                    merchantExpanded = false
                     focusManager.clearFocus()
                 },
                 addLabel = if (shouldOfferNewMerchant(merchant, merchantSuggestions)) "Add “${merchant.trim()}”" else null,
                 onAdd = if (shouldOfferNewMerchant(merchant, merchantSuggestions)) {{
                     viewModel.createMerchant(merchant) { created ->
                         created?.let { merchant = it.displayName }
-                        merchantFocused = false
+                        merchantExpanded = false
                         focusManager.clearFocus()
                     }
-                }} else null
+                }} else null,
+                emptyMessage = if (merchant.isNotBlank() && merchantSuggestions.isEmpty()) "No matching merchants" else null
             )
         }
 
@@ -114,14 +157,24 @@ fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = vie
             query = categoryQuery,
             selected = selectedCategory,
             suggestedCategoryId = merchantSuggestedCategoryId,
-            expanded = categoryFocused,
+            expanded = categoryExpanded,
+            onToggleExpand = { expanded ->
+                categoryExpanded = expanded
+                if (expanded) merchantExpanded = false else focusManager.clearFocus()
+            },
             onQueryChange = { categoryQuery = it; selectedCategoryId = null },
-            onFocusChange = { categoryFocused = it },
+            onFocusChange = { focused ->
+                if (focused) {
+                    categoryExpanded = true
+                    merchantExpanded = false
+                }
+            },
             onSelected = { category ->
                 selectedCategoryId = category.id
                 categoryQuery = category.name
                 categoryChosenByUser = true
-                categoryFocused = false
+                categoryExpanded = false
+                merchantExpanded = false
                 focusManager.clearFocus()
             }
         )
@@ -193,20 +246,37 @@ fun AddExpenseScreen(onSaved: () -> Unit, viewModel: TransactionsViewModel = vie
 @Composable
 private fun SearchableCategorySelector(
     categories: List<CategoryEntity>, query: String, selected: CategoryEntity?, suggestedCategoryId: Long?, expanded: Boolean,
+    onToggleExpand: (Boolean) -> Unit,
     onQueryChange: (String) -> Unit, onFocusChange: (Boolean) -> Unit, onSelected: (CategoryEntity) -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = query, onValueChange = onQueryChange,
-            label = { Text("Category") }, placeholder = { Text("Search categories") }, singleLine = true,
+            value = query,
+            onValueChange = {
+                onQueryChange(it)
+                onToggleExpand(true)
+            },
+            label = { Text("Category") }, placeholder = { Text("Search categories") },
+            trailingIcon = {
+                IconButton(onClick = {
+                    onToggleExpand(!expanded)
+                }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                        contentDescription = if (expanded) "Close category options" else "Open category options"
+                    )
+                }
+            },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) }
         )
         if (expanded) {
-            val ranked = rankCategories(query, categories, suggestedCategoryId)
+            val ranked = rankCategories(query, categories, suggestedCategoryId, limit = null)
             InlineSuggestionList(
-                ranked.map { InlineSuggestion(it.category.id, it.category, it.category.name,
+                suggestions = ranked.map { InlineSuggestion(it.category.id, it.category, it.category.name,
                     if (it.category.id == suggestedCategoryId) "Suggested for this merchant" else null) },
-                onSelected = onSelected
+                onSelected = onSelected,
+                emptyMessage = if (query.isNotBlank() && ranked.isEmpty()) "No matching categories" else null
             )
         }
     }
@@ -227,8 +297,9 @@ private fun SplitRow(
                 label = { Text("Item or note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth()
             )
             SearchableCategorySelector(categories, query, category, null, expanded,
+                onToggleExpand = { expanded = it },
                 onQueryChange = { query = it; expanded = true; onChange(split.copy(categoryId = null)) },
-                onFocusChange = { expanded = it },
+                onFocusChange = { if (it) expanded = true },
                 onSelected = { selected -> query = selected.name; expanded = false; onChange(split.copy(categoryId = selected.id)) })
             OutlinedTextField(
                 value = split.amount, onValueChange = { onChange(split.copy(amount = it)) },

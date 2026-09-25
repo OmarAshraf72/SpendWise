@@ -6,10 +6,10 @@ fun rankCategories(
     query: String,
     categoriesInUsageOrder: List<CategoryEntity>,
     suggestedCategoryId: Long? = null,
-    limit: Int = 5
+    limit: Int? = 5
 ): List<CategorySuggestion> {
     val normalizedQuery = normalizeSearchText(query)
-    return categoriesInUsageOrder.asSequence()
+    val sorted = categoriesInUsageOrder.asSequence()
         .filterNot { it.isArchived }
         .mapIndexedNotNull { usageIndex, category ->
             val normalizedName = normalizeSearchText(category.name)
@@ -26,9 +26,9 @@ fun rankCategories(
         .sortedWith(compareBy<Triple<CategorySuggestion, Int, Boolean>> { it.first.matchRank }
             .thenBy { it.third }
             .thenBy { it.second })
-        .take(limit)
         .map { it.first }
         .toList()
+    return if (limit != null && limit > 0) sorted.take(limit) else sorted
 }
 
 private fun normalizeSearchText(value: String): String = normalizeMerchantName(value)

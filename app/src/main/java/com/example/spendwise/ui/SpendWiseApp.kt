@@ -41,6 +41,9 @@ import com.example.spendwise.screens.AddExpenseScreen
 import com.example.spendwise.screens.AddIncomeScreen
 import com.example.spendwise.screens.AddCommitmentScreen
 import com.example.spendwise.screens.CategoriesScreen
+import com.example.spendwise.screens.ManageCategoriesScreen
+import com.example.spendwise.screens.CategoryDetailScreen
+import com.example.spendwise.screens.TransactionDetailScreen
 import com.example.spendwise.screens.HomeScreen
 import com.example.spendwise.screens.CommitmentsScreen
 import com.example.spendwise.screens.ReceiptCaptureScreen
@@ -85,10 +88,14 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
     val debtDetailRoute = "debt_detail/{debtProfileId}"
     val assetsRoute = MainDestination.Assets.route
     val addAssetRoute = "add_asset"
+    val addAssetFromTransactionRoute = "add_asset/from_transaction/{transactionId}"
+    val categoryDetailRoute = "category/{categoryId}?period={period}"
+    val manageCategoriesRoute = "manage_categories"
+    val transactionDetailRoute = "transaction/{transactionId}"
     val assetDetailRoute = "asset/{assetId}"
     val assetMaintenanceRoute = "asset/{assetId}/maintenance?complete={complete}&ruleId={ruleId}"
     val editAssetRoute = "edit_asset/{assetId}"
-    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, editAssetRoute, assetDetailRoute, assetMaintenanceRoute, receiptCaptureRoute, receiptReviewRoute, settingsRoute, customizeRoute)
+    val fullScreenRoutes = setOf(addExpenseRoute, addIncomeRoute, addCommitmentRoute, editCommitmentRoute, debtDetailRoute, addAssetRoute, addAssetFromTransactionRoute, editAssetRoute, assetDetailRoute, assetMaintenanceRoute, receiptCaptureRoute, receiptReviewRoute, settingsRoute, customizeRoute, manageCategoriesRoute, transactionDetailRoute)
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     Scaffold(
@@ -113,9 +120,9 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
                     currentRoute = currentRoute,
                     onDestination = { destination ->
                         navController.navigate(destination.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = false }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = false
                         }
                     },
                     onReorderPinned = navigationViewModel::savePinnedOrder
@@ -137,7 +144,8 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
                 )
             }
             composable(MainDestination.Transactions.route) {
-                TransactionsScreen(onAddExpense = { navController.navigate(addExpenseRoute) })
+                TransactionsScreen(onAddExpense = { navController.navigate(addExpenseRoute) },
+                    onAddToItems = { navController.navigate("add_asset/from_transaction/$it") })
             }
             composable(MainDestination.Analytics.route) { AnalyticsScreen() }
             composable(MainDestination.Commitments.route) {
@@ -157,12 +165,18 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
             }
             composable(assetsRoute) { MyAssetsScreen(onAdd = { navController.navigate(addAssetRoute) }, onOpen = { navController.navigate("asset/$it") }) }
             composable(addAssetRoute) { AddAssetScreen(onSaved = { id -> navController.navigate("asset/$id") { popUpTo(addAssetRoute) { inclusive = true } } }, onCancel = { navController.popBackStack() }) }
+            composable(addAssetFromTransactionRoute, arguments = listOf(navArgument("transactionId") { type = NavType.LongType })) { entry ->
+                AddAssetScreen(transactionId = entry.arguments?.getLong("transactionId"),
+                    onSaved = { id -> navController.navigate("asset/$id") { popUpTo(addAssetFromTransactionRoute) { inclusive = true } } },
+                    onCancel = { navController.popBackStack() })
+            }
             composable(editAssetRoute, arguments = listOf(navArgument("assetId") { type = NavType.LongType })) { entry ->
                 AddAssetScreen(assetId = entry.arguments?.getLong("assetId"), onSaved = { navController.popBackStack() }, onCancel = { navController.popBackStack() })
             }
             composable(assetDetailRoute, arguments = listOf(navArgument("assetId") { type = NavType.LongType })) {
                 AssetDetailScreen(onBack = { navController.popBackStack() }, onEdit = { navController.navigate("edit_asset/$it") }, onCommitment = { navController.navigate(MainDestination.Commitments.route) },
-                    onMaintenance = { id, complete, ruleId -> navController.navigate("asset/$id/maintenance?complete=$complete&ruleId=${ruleId ?: 0}") })
+                    onMaintenance = { id, complete, ruleId -> navController.navigate("asset/$id/maintenance?complete=$complete&ruleId=${ruleId ?: 0}") },
+                    onTransaction = { navController.navigate("transaction/$it") })
             }
             composable(assetMaintenanceRoute, arguments = listOf(
                 navArgument("assetId") { type = NavType.LongType }, navArgument("complete") { type = NavType.BoolType; defaultValue = false },
@@ -171,7 +185,19 @@ fun SpendWiseApp(notificationAssetRequest: Pair<Long, Int>? = null) {
                 AssetMaintenanceScreen(onBack = { navController.popBackStack() }, openCompletion = entry.arguments?.getBoolean("complete") == true,
                     initialRuleId = entry.arguments?.getLong("ruleId")?.takeIf { it > 0 })
             }
-            composable(categoriesRoute) { CategoriesScreen() }
+            composable(categoriesRoute) { CategoriesScreen(onOpen = { id, period -> navController.navigate("category/$id?period=${period.name}") },
+                onManage = { navController.navigate(manageCategoriesRoute) }) }
+            composable(categoryDetailRoute, arguments = listOf(
+                navArgument("categoryId") { type = NavType.LongType },
+                navArgument("period") { type = NavType.StringType; nullable = true }
+            )) {
+                CategoryDetailScreen(onBack = { navController.popBackStack() }, onItem = { navController.navigate("asset/$it") },
+                    onTransaction = { navController.navigate("transaction/$it") })
+            }
+            composable(manageCategoriesRoute) { ManageCategoriesScreen(onBack = { navController.popBackStack() }) }
+            composable(transactionDetailRoute, arguments = listOf(navArgument("transactionId") { type = NavType.LongType })) {
+                TransactionDetailScreen(onBack = { navController.popBackStack() })
+            }
             composable(settingsRoute) {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },

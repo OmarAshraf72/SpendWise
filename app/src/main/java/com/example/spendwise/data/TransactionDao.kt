@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TransactionDao {
     @Transaction
+    @Query("SELECT * FROM transactions WHERE id = :id LIMIT 1")
+    suspend fun getTransactionWithCategory(id: Long): TransactionWithCategory?
+    @Transaction
     @Query("SELECT * FROM transactions ORDER BY transactionDate DESC, createdAt DESC")
     fun observeTransactions(): Flow<List<TransactionWithCategory>>
 

@@ -8,18 +8,28 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 
 enum class AssetType { VEHICLE, PHONE, COMPUTER, TABLET, ELECTRONICS, APPLIANCE, OTHER }
+enum class OwnershipStatus { OWNED, SOLD, GIVEN_AWAY, LOST, DISPOSED }
 enum class AssetIdentifierType { SERIAL_NUMBER, IMEI, VIN, OTHER }
 enum class AssetWarrantyType { MANUFACTURER, SELLER, EXTENDED, OTHER }
 enum class MaintenanceTriggerType { TIME, MILEAGE, TIME_OR_MILEAGE }
 enum class MaintenanceRuleKind { SERVICE_SCHEDULE, MAINTENANCE_ITEM }
 enum class AssetCommitmentRelationType { FINANCING, INSURANCE, OTHER }
 enum class AssetTransactionRelationType { PURCHASE, MAINTENANCE, REPAIR, INSURANCE, FUEL, OTHER }
-enum class AssetDocumentType { INVOICE, WARRANTY_CARD, PURCHASE_CONTRACT, SERVICE_RECEIPT, INSURANCE, REGISTRATION, OTHER }
+enum class AssetDocumentType { INVOICE, WARRANTY_CARD, PURCHASE_CONTRACT, SERVICE_RECEIPT, INSURANCE, REGISTRATION, OTHER, RECEIPT }
+
+@Entity(tableName = "custom_asset_types", indices = [Index(value = ["normalizedName"], unique = true)])
+data class CustomAssetTypeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val normalizedName: String,
+    @ColumnInfo(defaultValue = "0") val isArchived: Boolean = false,
+    val createdAt: Long
+)
 
 @Entity(
     tableName = "assets",
     foreignKeys = [ForeignKey(entity = MerchantEntity::class, parentColumns = ["id"], childColumns = ["sellerMerchantId"], onDelete = ForeignKey.NO_ACTION)],
-    indices = [Index("sellerMerchantId"), Index("type"), Index("isArchived")]
+    indices = [Index("sellerMerchantId"), Index("type"), Index("isArchived"), Index("categoryId"), Index("customTypeId"), Index("ownershipStatus")]
 )
 data class AssetEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -35,7 +45,10 @@ data class AssetEntity(
     val isArchived: Boolean = false,
     val createdAt: Long,
     val updatedAt: Long,
-    val mileageUpdatedAt: Long? = null
+    val mileageUpdatedAt: Long? = null,
+    val customTypeId: Long? = null,
+    val categoryId: Long? = null,
+    @ColumnInfo(defaultValue = "'OWNED'") val ownershipStatus: OwnershipStatus = OwnershipStatus.OWNED
 )
 
 @Entity(
@@ -173,6 +186,8 @@ data class AssetTransactionLinkEntity(val assetId: Long, val transactionId: Long
 class AssetConverters {
     @TypeConverter fun assetType(v: AssetType) = v.name
     @TypeConverter fun assetType(v: String) = AssetType.valueOf(v)
+    @TypeConverter fun ownershipStatus(v: OwnershipStatus) = v.name
+    @TypeConverter fun ownershipStatus(v: String) = OwnershipStatus.valueOf(v)
     @TypeConverter fun identifierType(v: AssetIdentifierType) = v.name
     @TypeConverter fun identifierType(v: String) = AssetIdentifierType.valueOf(v)
     @TypeConverter fun warrantyType(v: AssetWarrantyType) = v.name
