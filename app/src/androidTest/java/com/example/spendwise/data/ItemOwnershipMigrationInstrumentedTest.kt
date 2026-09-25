@@ -56,7 +56,7 @@ class ItemOwnershipMigrationInstrumentedTest {
         } finally { raw.close() }
 
         val database = Room.databaseBuilder(context, SpendWiseDatabase::class.java, name)
-            .addMigrations(SpendWiseDatabase.MIGRATION_12_13).build()
+            .addMigrations(SpendWiseDatabase.MIGRATION_12_13, SpendWiseDatabase.MIGRATION_13_14).build()
         try {
             val db = database.openHelper.readableDatabase
             db.query("SELECT type, purchasePriceMinor, customTypeId, categoryId, ownershipStatus FROM assets WHERE id = 3").use {

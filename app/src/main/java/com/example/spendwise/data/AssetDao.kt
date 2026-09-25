@@ -25,6 +25,12 @@ interface AssetDao {
     @Query("SELECT * FROM assets WHERE isArchived = 0 ORDER BY updatedAt DESC, name ASC")
     fun observeActiveAssets(): Flow<List<AssetEntity>>
 
+    @Query("SELECT * FROM asset_ownership_events ORDER BY createdAt DESC, id DESC")
+    fun observeOwnershipEvents(): Flow<List<AssetOwnershipEventEntity>>
+    @Query("SELECT * FROM asset_ownership_events WHERE assetId = :assetId ORDER BY createdAt DESC, id DESC LIMIT 1")
+    suspend fun latestOwnershipEvent(assetId: Long): AssetOwnershipEventEntity?
+    @Insert suspend fun insertOwnershipEvent(event: AssetOwnershipEventEntity): Long
+
     @Query("SELECT * FROM assets WHERE id = :id LIMIT 1")
     fun observeAsset(id: Long): Flow<AssetEntity?>
     @Query("SELECT * FROM assets WHERE id = :id LIMIT 1")

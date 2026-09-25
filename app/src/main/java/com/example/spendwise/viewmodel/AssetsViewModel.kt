@@ -23,7 +23,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-data class AssetCardUi(val asset: AssetEntity, val attention: String?, val secondary: String? = null)
+data class AssetCardUi(val asset: AssetEntity, val attention: String?, val secondary: String? = null,
+                       val latestOwnershipEvent: AssetOwnershipEventEntity? = null)
 data class AssetAttentionUi(val assetName: String, val item: AssetAttentionItem)
 data class AssetsUiState(val cards: List<AssetCardUi> = emptyList(), val attentionCount: Int = 0,
                          val topAttention: List<AssetAttentionUi> = emptyList())
@@ -118,7 +119,8 @@ data class AssetDetailUiState(
     val maintenanceDocumentIds: Set<Long> = emptySet(),
     val linkedCommitments: List<Pair<AssetCommitmentLinkEntity, CommitmentWithMerchant>> = emptyList(),
     val dueByRule: Map<Long, MaintenanceDueResult> = emptyMap(),
-    val purchaseTransactionIds: List<Long> = emptyList()
+    val purchaseTransactionIds: List<Long> = emptyList(),
+    val ownershipEvents: List<AssetOwnershipEventEntity> = emptyList()
 )
 
 class AssetDetailViewModel(application: Application, savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
@@ -150,6 +152,7 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
             documents = data.documents.filter { it.assetId == assetId },
             maintenanceDocumentIds = data.maintenanceDocumentLinks.mapTo(mutableSetOf()) { it.assetDocumentId },
             purchaseTransactionIds = data.transactionLinks.filter { it.assetId == assetId && it.relationType == AssetTransactionRelationType.PURCHASE }.map { it.transactionId },
+            ownershipEvents = data.ownershipEvents.filter { it.assetId == assetId }.sortedWith(compareByDescending<AssetOwnershipEventEntity> { it.createdAt }.thenByDescending { it.id }),
             linkedCommitments = data.commitmentLinks.filter { it.assetId == assetId }.mapNotNull { link ->
                 commitmentData.commitments.firstOrNull { it.commitment.id == link.commitmentId }?.let { link to it }
             },
@@ -194,7 +197,10 @@ class AssetDetailViewModel(application: Application, savedStateHandle: SavedStat
     fun deleteDocument(id: Long) = viewModelScope.launch { repository.deleteDocument(id, storage) }
     fun renameDocument(id: Long, title: String) = viewModelScope.launch { repository.renameDocument(id, title) }
     fun archive(done: () -> Unit) = viewModelScope.launch { repository.archive(assetId); done() }
-    fun setOwnershipStatus(status: OwnershipStatus) = viewModelScope.launch { repository.setOwnershipStatus(assetId, status) }
+    fun setOwnershipStatus(status: OwnershipStatus, effectiveDate: LocalDate, note: String?, done: (String?) -> Unit) = viewModelScope.launch {
+        runCatching { repository.setOwnershipStatus(assetId, status, effectiveDate, note) }
+            .onSuccess { done(null) }.onFailure { done(it.message ?: "Could not change ownership status") }
+    }
 }
 
 data class MaintenanceUiState(
@@ -301,7 +307,8 @@ private fun buildAssetCards(data: AssetData, today: LocalDate, commitments: Comm
         val financing = data.commitmentLinks.firstOrNull { it.assetId == asset.id && it.relationType == AssetCommitmentRelationType.FINANCING }
             ?.let { link -> commitments?.commitments?.firstOrNull { it.commitment.id == link.commitmentId } }
             ?.let { "Financing: ${formatEgp(it.commitment.amountMinor)} · ${LocalDate.ofEpochDay(it.commitment.nextDueDateEpochDay)}" }
-        AssetCardUi(asset, mostImportant?.message, financing)
+        AssetCardUi(asset, mostImportant?.message, financing,
+            data.ownershipEvents.filter { it.assetId == asset.id }.maxWithOrNull(compareBy<AssetOwnershipEventEntity> { it.createdAt }.thenBy { it.id }))
     }
     return AssetsUiState(cards, cards.count { it.attention != null },
         attention.filter { it.status != AssetAttentionStatus.UPCOMING }.take(3).mapNotNull { item ->

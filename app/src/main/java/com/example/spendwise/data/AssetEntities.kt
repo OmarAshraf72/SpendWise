@@ -52,6 +52,20 @@ data class AssetEntity(
 )
 
 @Entity(
+    tableName = "asset_ownership_events",
+    foreignKeys = [ForeignKey(entity = AssetEntity::class, parentColumns = ["id"], childColumns = ["assetId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("assetId"), Index(value = ["assetId", "createdAt"])]
+)
+data class AssetOwnershipEventEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val assetId: Long,
+    val status: OwnershipStatus,
+    val effectiveDateEpochDay: Long,
+    val note: String?,
+    val createdAt: Long
+)
+
+@Entity(
     tableName = "asset_identifiers",
     foreignKeys = [ForeignKey(entity = AssetEntity::class, parentColumns = ["id"], childColumns = ["assetId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("assetId"), Index(value = ["assetId", "type", "value"], unique = true)]

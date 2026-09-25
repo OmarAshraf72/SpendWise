@@ -17,14 +17,14 @@ import kotlinx.coroutines.launch
         CategoryEntity::class, TransactionEntity::class, ItemCategoryMappingEntity::class, MerchantEntity::class,
         FinancialCommitmentEntity::class, CommitmentOccurrenceOverrideEntity::class,
         DebtProfileEntity::class, DebtPaymentEntity::class, FinancingTermsEntity::class, LatePaymentRuleEntity::class
-        , AssetEntity::class, CustomAssetTypeEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
+        , AssetEntity::class, CustomAssetTypeEntity::class, AssetOwnershipEventEntity::class, AssetIdentifierEntity::class, AssetWarrantyEntity::class,
         AssetMaintenanceRuleEntity::class, AssetMaintenanceEventEntity::class, AssetDocumentEntity::class,
         AssetMaintenanceDocumentLinkEntity::class,
         AssetCommitmentLinkEntity::class, AssetTransactionLinkEntity::class,
         AssetCheckpointEntity::class, AssetCheckpointEventEntity::class,
         AssetReminderRuleEntity::class, AssetNotificationDeliveryEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(
@@ -52,7 +52,7 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 "spendwise.db"
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14
             ).addCallback(object : Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -542,6 +542,21 @@ abstract class SpendWiseDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX index_assets_customTypeId ON assets (customTypeId)")
                 db.execSQL("CREATE INDEX index_assets_categoryId ON assets (categoryId)")
                 db.execSQL("CREATE INDEX index_assets_ownershipStatus ON assets (ownershipStatus)")
+            }
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS asset_ownership_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    assetId INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    effectiveDateEpochDay INTEGER NOT NULL,
+                    note TEXT,
+                    createdAt INTEGER NOT NULL,
+                    FOREIGN KEY(assetId) REFERENCES assets(id) ON UPDATE NO ACTION ON DELETE CASCADE)""".trimIndent())
+                db.execSQL("CREATE INDEX index_asset_ownership_events_assetId ON asset_ownership_events (assetId)")
+                db.execSQL("CREATE INDEX index_asset_ownership_events_assetId_createdAt ON asset_ownership_events (assetId, createdAt)")
             }
         }
     }

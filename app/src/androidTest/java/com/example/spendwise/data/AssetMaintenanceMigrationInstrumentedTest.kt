@@ -47,7 +47,8 @@ class AssetMaintenanceMigrationInstrumentedTest {
         } finally { raw.close() }
 
         val database = Room.databaseBuilder(context, SpendWiseDatabase::class.java, name)
-            .addMigrations(SpendWiseDatabase.MIGRATION_10_11).build()
+            .addMigrations(SpendWiseDatabase.MIGRATION_10_11, SpendWiseDatabase.MIGRATION_11_12,
+                SpendWiseDatabase.MIGRATION_12_13, SpendWiseDatabase.MIGRATION_13_14).build()
         try {
             val migrated = database.openHelper.readableDatabase
             migrated.query("SELECT title, mileageKm, costMinor, providerNameSnapshot FROM asset_maintenance_events WHERE id = 1").use {

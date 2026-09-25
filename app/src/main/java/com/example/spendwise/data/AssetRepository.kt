@@ -21,7 +21,8 @@ data class AssetData(
     val transactionLinks: List<AssetTransactionLinkEntity>,
     val checkpoints: List<AssetCheckpointEntity>,
     val checkpointEvents: List<AssetCheckpointEventEntity>,
-    val maintenanceDocumentLinks: List<AssetMaintenanceDocumentLinkEntity> = emptyList()
+    val maintenanceDocumentLinks: List<AssetMaintenanceDocumentLinkEntity> = emptyList(),
+    val ownershipEvents: List<AssetOwnershipEventEntity> = emptyList()
 )
 
 data class NewAssetInput(
@@ -87,7 +88,8 @@ class AssetRepository(private val database: SpendWiseDatabase) {
     val data = combine(
         dao.observeActiveAssets(), dao.observeIdentifiers(), dao.observeWarranties(), dao.observeAllMaintenanceRules(),
         dao.observeMaintenanceEvents(), dao.observeDocuments(), dao.observeCommitmentLinks(), dao.observeTransactionLinks(),
-        dao.observeCheckpoints(), dao.observeCheckpointEvents(), dao.observeMaintenanceDocumentLinks()
+        dao.observeCheckpoints(), dao.observeCheckpointEvents(), dao.observeMaintenanceDocumentLinks(),
+        dao.observeOwnershipEvents()
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         AssetData(
@@ -96,7 +98,8 @@ class AssetRepository(private val database: SpendWiseDatabase) {
             values[4] as List<AssetMaintenanceEventEntity>, values[5] as List<AssetDocumentEntity>,
             values[6] as List<AssetCommitmentLinkEntity>, values[7] as List<AssetTransactionLinkEntity>,
             values[8] as List<AssetCheckpointEntity>, values[9] as List<AssetCheckpointEventEntity>,
-            values[10] as List<AssetMaintenanceDocumentLinkEntity>
+            values[10] as List<AssetMaintenanceDocumentLinkEntity>,
+            values[11] as List<AssetOwnershipEventEntity>
         )
     }
 
@@ -121,9 +124,14 @@ class AssetRepository(private val database: SpendWiseDatabase) {
         dao.archiveCustomType(id)
     }
 
-    suspend fun setOwnershipStatus(assetId: Long, status: OwnershipStatus) = database.withTransaction {
+    suspend fun setOwnershipStatus(assetId: Long, status: OwnershipStatus, effectiveDate: LocalDate, note: String?) = database.withTransaction {
         val existing = requireNotNull(dao.getAsset(assetId))
-        dao.updateAsset(existing.copy(ownershipStatus = status, updatedAt = System.currentTimeMillis()))
+        require(!existing.isArchived) { "Archived items cannot change ownership status" }
+        if (existing.ownershipStatus == status) return@withTransaction
+        val now = System.currentTimeMillis()
+        dao.updateAsset(existing.copy(ownershipStatus = status, updatedAt = now))
+        dao.insertOwnershipEvent(AssetOwnershipEventEntity(assetId = assetId, status = status,
+            effectiveDateEpochDay = effectiveDate.toEpochDay(), note = note?.trim()?.takeIf { it.isNotEmpty() }, createdAt = now))
     }
 
     suspend fun purchasePrefill(transactionId: Long): AssetPurchasePrefill? =
@@ -166,9 +174,11 @@ class AssetRepository(private val database: SpendWiseDatabase) {
         }
         val resolvedSellerId = input.asset.sellerMerchantId ?: input.sellerName?.takeIf(String::isNotBlank)
             ?.let { MerchantRepository(database.merchantDao()).createIfMissing(it, System.currentTimeMillis())?.id }
-        val assetToSave = input.asset.copy(sellerMerchantId = resolvedSellerId)
+        // Ownership changes go through setOwnershipStatus so edits cannot erase lifecycle events.
+        val current = if (input.asset.id == 0L) null else requireNotNull(dao.getAsset(input.asset.id))
+        val assetToSave = input.asset.copy(sellerMerchantId = resolvedSellerId,
+            ownershipStatus = current?.ownershipStatus ?: OwnershipStatus.OWNED)
         val assetId = if (input.asset.id == 0L) dao.insertAsset(assetToSave) else {
-            requireNotNull(dao.getAsset(input.asset.id))
             dao.updateAsset(assetToSave)
             input.asset.id
         }

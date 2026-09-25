@@ -4,6 +4,20 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Locale
 
+fun OwnershipStatus.displayLabel(): String = when (this) {
+    OwnershipStatus.OWNED -> "Owned"
+    OwnershipStatus.SOLD -> "Sold"
+    OwnershipStatus.GIVEN_AWAY -> "Given away"
+    OwnershipStatus.LOST -> "Lost"
+    OwnershipStatus.DISPOSED -> "Disposed"
+}
+
+fun itemMatchesSearch(asset: AssetEntity, typeLabel: String, query: String): Boolean {
+    val needle = query.trim().lowercase(Locale.ROOT)
+    return needle.isEmpty() || listOfNotNull(asset.name, asset.brand, asset.model, typeLabel)
+        .any { it.lowercase(Locale.ROOT).contains(needle) }
+}
+
 fun normalizeCustomAssetTypeName(name: String): String = name.trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)
 
 fun itemTypeLabel(type: AssetType, customTypeId: Long?, customTypes: List<CustomAssetTypeEntity>): String =

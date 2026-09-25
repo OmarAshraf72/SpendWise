@@ -54,7 +54,7 @@ class ItemOwnershipPersistenceInstrumentedTest {
             assertEquals("Shoes", itemTypeLabel(AssetType.OTHER, typeId,
                 database.assetDao().observeAllCustomTypes().first()))
             assertEquals(typeId, repository.createCustomType("SHOES"))
-            repository.setOwnershipStatus(assetId, OwnershipStatus.SOLD)
+            repository.setOwnershipStatus(assetId, OwnershipStatus.SOLD, LocalDate.of(2027, 9, 25), "Sold to Ahmed")
             assertTrue(buildCategoryExplorerEntries(database.categoryDao().getActiveCategories(),
                 database.transactionDao().observeTransactions().first(), database.assetDao().observeActiveAssets().first(),
                 LocalDate.of(2026, 9, 25)).single().ownedItems.isEmpty())

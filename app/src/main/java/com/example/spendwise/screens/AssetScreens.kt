@@ -46,6 +46,8 @@ fun MyAssetsScreen(onAdd: () -> Unit, onOpen: (Long) -> Unit, viewModel: AssetsV
     val customTypes by viewModel.customTypes.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf("All") }
     var showHistory by rememberSaveable { mutableStateOf(false) }
+    var search by rememberSaveable { mutableStateOf("") }
+    val categoryNames = viewModel.categories.collectAsStateWithLifecycle().value.associate { it.id to it.name }
     val cards = state.cards.filter { if (showHistory) it.asset.ownershipStatus != OwnershipStatus.OWNED else it.asset.ownershipStatus == OwnershipStatus.OWNED }.filter {
         when (filter) {
             "Vehicles" -> it.asset.type == AssetType.VEHICLE
@@ -53,7 +55,7 @@ fun MyAssetsScreen(onAdd: () -> Unit, onOpen: (Long) -> Unit, viewModel: AssetsV
             "Other" -> it.asset.type == AssetType.OTHER
             else -> true
         }
-    }
+    }.filter { itemMatchesSearch(it.asset, itemTypeLabel(it.asset.type, it.asset.customTypeId, customTypes), search) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Column(Modifier.fillMaxWidth().padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -70,6 +72,8 @@ fun MyAssetsScreen(onAdd: () -> Unit, onOpen: (Long) -> Unit, viewModel: AssetsV
                 FilterChip(showHistory, { showHistory = true }, label = { Text("History") })
             }
         }
+        item { OutlinedTextField(search, { search = it }, label = { Text("Search items") },
+            singleLine = true, modifier = Modifier.fillMaxWidth()) }
         item {
             LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("All", "Vehicles", "Electronics", "Other").forEach { label ->
@@ -78,14 +82,22 @@ fun MyAssetsScreen(onAdd: () -> Unit, onOpen: (Long) -> Unit, viewModel: AssetsV
             }
         }
         if (cards.isEmpty()) item {
-            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text(if (showHistory) "No past items" else "No items yet", fontWeight = FontWeight.SemiBold); if (!showHistory) TextButton(onClick = onAdd) { Text("Add your first item") } } }
+            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(if (search.isNotBlank()) "No matching items" else if (showHistory) "No ownership history yet" else "No items yet", fontWeight = FontWeight.SemiBold)
+                if (search.isBlank()) Text(if (showHistory) "Items you sell, give away, lose or dispose of will appear here."
+                    else "Add things you own to keep purchase info, documents, warranties and maintenance in one place.")
+                if (!showHistory && search.isBlank()) TextButton(onClick = onAdd) { Text("Add your first item") }
+            } }
         }
         items(cards, key = { it.asset.id }) { card ->
             Card(Modifier.fillMaxWidth().clickable { onOpen(card.asset.id) }) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(card.asset.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(itemTypeLabel(card.asset.type, card.asset.customTypeId, customTypes), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (showHistory) Text(card.asset.ownershipStatus.name.replace('_', ' ').lowercase().replaceFirstChar(Char::uppercase))
+                    Text(itemTypeLabel(card.asset.type, card.asset.customTypeId, customTypes) +
+                        (categoryNames[card.asset.categoryId]?.let { " · $it" } ?: ""), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (showHistory) Text(card.asset.ownershipStatus.displayLabel() +
+                        (card.latestOwnershipEvent?.takeIf { it.status == card.asset.ownershipStatus }?.let { " · ${LocalDate.ofEpochDay(it.effectiveDateEpochDay).format(assetDateFormatter)}" } ?: ""))
+                    else card.asset.purchaseDateEpochDay?.let { Text("Bought ${LocalDate.ofEpochDay(it).format(assetDateFormatter)}") }
                     listOfNotNull(card.asset.brand, card.asset.model).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" ")) }
                     card.attention?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) }
                     card.secondary?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -353,6 +365,12 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
     var editingCheckpoint by remember { mutableStateOf<AssetCheckpointEntity?>(null) }
     var completingCheckpoint by remember { mutableStateOf<AssetCheckpointEntity?>(null) }
     var reminderTarget by remember { mutableStateOf<AssetAttentionItem?>(null) }
+    var showStatusOptions by remember { mutableStateOf(false) }
+    var targetStatus by remember { mutableStateOf<OwnershipStatus?>(null) }
+    var statusDate by remember { mutableStateOf(LocalDate.now()) }
+    var statusNote by remember { mutableStateOf("") }
+    var pickingStatusDate by remember { mutableStateOf(false) }
+    var statusSaving by remember { mutableStateOf(false) }
     val documentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         pendingDocumentUri = uri
     }
@@ -388,6 +406,14 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
                 }
             }
         }
+        item { DetailSection("Status") {
+            Text(asset.ownershipStatus.displayLabel(), style = MaterialTheme.typography.titleMedium)
+            state.ownershipEvents.firstOrNull()?.takeIf { it.status == asset.ownershipStatus }?.let { event ->
+                Text(LocalDate.ofEpochDay(event.effectiveDateEpochDay).format(assetDateFormatter))
+                event.note?.let { Text(it) }
+            }
+            TextButton(onClick = { showStatusOptions = true }) { Text("Change ownership status") }
+        } }
         item { DetailSection("Purchase") { Text(asset.purchaseDateEpochDay?.let { LocalDate.ofEpochDay(it).format(assetDateFormatter) } ?: "No purchase date"); asset.purchasePriceMinor?.let { Text(formatEgp(it)) }; val seller = asset.sellerMerchantId?.let { id -> merchants.firstOrNull { it.id == id }?.displayName } ?: linkedPurchase.firstOrNull()?.transaction?.merchant; seller?.let { Text("Seller: $it") } } }
         if (linkedPurchase.isNotEmpty()) item { DetailSection("Purchase transaction") {
             linkedPurchase.forEach { row ->
@@ -471,9 +497,46 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, onCommitment: 
         item { DetailSection("Documents") { if (state.documents.isEmpty()) Text("No documents") else state.documents.forEach { doc -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(doc.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(doc.originalFileName, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }; TextButton(onClick = {
             val file = viewModel.documentFile(doc.storedRelativePath); if (file == null) message = "Stored file is missing" else runCatching { val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file); context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, doc.mimeType).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }.onFailure { message = "No app can open this document" }
         }) { Text("View") }; TextButton(onClick = { pendingRename = doc }) { Text("Rename") }; if (doc.id !in state.maintenanceDocumentIds) TextButton(onClick = { pendingDelete = doc }) { Text("Delete") } } }; TextButton(onClick = { documentPicker.launch(arrayOf("image/*", "application/pdf")) }) { Text("Attach document") } } }
-        item { DetailSection("Status") { AssetEnumDropdown("Ownership", asset.ownershipStatus, OwnershipStatus.entries) { viewModel.setOwnershipStatus(it) } } }
+        if (state.ownershipEvents.size > 1) item { DetailSection("Ownership history") {
+            state.ownershipEvents.forEach { event ->
+                Text("${event.status.displayLabel()} · ${LocalDate.ofEpochDay(event.effectiveDateEpochDay).format(assetDateFormatter)}")
+                event.note?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+        } }
         item { TextButton(onClick = { dialog = "archive" }, Modifier.fillMaxWidth()) { Text("Archive item", color = MaterialTheme.colorScheme.error) }; Spacer(Modifier.height(16.dp)) }
     }
+    if (showStatusOptions) AlertDialog(onDismissRequest = { showStatusOptions = false },
+        title = { Text("Change ownership status") },
+        text = { Column {
+            OwnershipStatus.entries.forEach { status ->
+                TextButton(enabled = status != asset.ownershipStatus, onClick = {
+                    targetStatus = status; statusDate = LocalDate.now(); statusNote = ""; showStatusOptions = false
+                }, modifier = Modifier.fillMaxWidth()) { Text(status.displayLabel()) }
+            }
+        } }, confirmButton = { TextButton(onClick = { showStatusOptions = false }) { Text("Cancel") } })
+    targetStatus?.let { status ->
+        AlertDialog(onDismissRequest = { if (!statusSaving) targetStatus = null },
+            title = { Text(if (status == OwnershipStatus.OWNED) "Mark as owned?" else "Mark as ${status.displayLabel().lowercase()}?") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(if (status == OwnershipStatus.OWNED) "${asset.name} will return to your current items."
+                    else "${asset.name} will move from your current items to Ownership history.")
+                TextButton(onClick = { pickingStatusDate = true }) {
+                    Text("Effective date: ${statusDate.format(assetDateFormatter)}")
+                }
+                OutlinedTextField(statusNote, { statusNote = it }, label = { Text("Note (optional)") },
+                    modifier = Modifier.fillMaxWidth(), maxLines = 3)
+            } },
+            confirmButton = { TextButton(enabled = !statusSaving, onClick = {
+                statusSaving = true
+                viewModel.setOwnershipStatus(status, statusDate, statusNote) { error ->
+                    statusSaving = false
+                    if (error == null) targetStatus = null else message = error
+                }
+            }) { Text(if (status == OwnershipStatus.OWNED) "Mark as owned" else "Mark as ${status.displayLabel().lowercase()}") } },
+            dismissButton = { TextButton(enabled = !statusSaving, onClick = { targetStatus = null }) { Text("Cancel") } })
+    }
+    if (pickingStatusDate) SpendWiseDatePickerDialog(statusDate,
+        { statusDate = it; pickingStatusDate = false }, { pickingStatusDate = false })
     when (dialog) {
         "mileage" -> MileageDialog(asset.currentMileageKm, { dialog = null }) { viewModel.updateMileage(it) { accepted -> message = if (accepted) "Mileage updated" else "New mileage is lower than current mileage" }; dialog = null }
         "warranty" -> WarrantyDialog(asset.id, asset.purchaseDateEpochDay, { dialog = null }) { viewModel.addWarranty(it); dialog = null }

@@ -43,7 +43,8 @@ class AssetMaintenanceKindMigrationInstrumentedTest {
             raw.version = 11
         } finally { raw.close() }
         val database = Room.databaseBuilder(context, SpendWiseDatabase::class.java, name)
-            .addMigrations(SpendWiseDatabase.MIGRATION_11_12).build()
+            .addMigrations(SpendWiseDatabase.MIGRATION_11_12, SpendWiseDatabase.MIGRATION_12_13,
+                SpendWiseDatabase.MIGRATION_13_14).build()
         try {
             database.openHelper.readableDatabase.query("SELECT kind FROM asset_maintenance_rules WHERE id = 1").use {
                 assertTrue(it.moveToFirst())

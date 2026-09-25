@@ -63,4 +63,16 @@ class ItemOwnershipLogicTest {
         assertEquals(listOf(category), selectableItemCategories(listOf(category, archived), null))
         assertEquals(listOf(category, archived), selectableItemCategories(listOf(category, archived), archived.id))
     }
+
+    @Test fun lifecycleLabelsAndSearchCoverOwnedAndHistoricalItems() {
+        assertEquals("Given away", OwnershipStatus.GIVEN_AWAY.displayLabel())
+        assertEquals("Disposed", OwnershipStatus.DISPOSED.displayLabel())
+        assertTrue(itemMatchesSearch(item.copy(brand = "Nike", model = "Air Max"), "Shoes", "nike"))
+        assertTrue(itemMatchesSearch(item, "Shoes", "shoes"))
+        assertFalse(itemMatchesSearch(item, "Shoes", "watch"))
+        OwnershipStatus.entries.filter { it != OwnershipStatus.OWNED }.forEach { status ->
+            assertTrue(buildCategoryExplorerEntries(listOf(category), listOf(TransactionWithCategory(expense, category)),
+                listOf(item.copy(ownershipStatus = status)), LocalDate.of(2026, 9, 25)).single().ownedItems.isEmpty())
+        }
+    }
 }
