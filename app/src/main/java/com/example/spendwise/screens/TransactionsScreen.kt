@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -70,12 +72,7 @@ fun TransactionsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = "Transactions",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                ScreenHeader(title = "Transactions")
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -108,30 +105,16 @@ fun TransactionsScreen(
 
 @Composable
 private fun EmptyTransactions(filter: TransactionFilter) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp, horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Icon(Icons.AutoMirrored.Outlined.ReceiptLong, contentDescription = null)
-        Text(
-            text = when (filter) {
-                TransactionFilter.ALL -> "No transactions yet"
-                TransactionFilter.EXPENSES -> "No expense transactions"
-                TransactionFilter.INCOME -> "No income transactions"
-            },
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = if (filter == TransactionFilter.INCOME) {
-                "Income added from Home will appear here."
-            } else {
-                "Add an expense to start tracking your spending."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    val (title, subtitle) = when (filter) {
+        TransactionFilter.ALL -> "No transactions yet" to "Add an expense to start tracking your spending."
+        TransactionFilter.EXPENSES -> "No expense transactions" to "Add an expense to start tracking your spending."
+        TransactionFilter.INCOME -> "No income transactions" to "Income added from Home will appear here."
     }
+    EmptyStateContainer(
+        icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+        title = title,
+        subtitle = subtitle
+    )
 }
 
 @Composable
@@ -157,10 +140,17 @@ private fun TransactionRow(item: TransactionDisplay, onAddToItems: (Long) -> Uni
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = if (isIncome) "Income" else "Expense",
                         style = MaterialTheme.typography.labelMedium,
@@ -170,24 +160,48 @@ private fun TransactionRow(item: TransactionDisplay, onAddToItems: (Long) -> Uni
                 Text(
                     text = (if (isIncome) "+" else "-") + formatEgp(totalMinor),
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.SemiBold
+                    color = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 8.dp)
                 )
             }
             if (!isIncome) {
                 if (isSplit) {
                     Text("${item.rows.size} splits", style = MaterialTheme.typography.labelMedium)
                     item.rows.forEach { split ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(split.category?.name ?: "Uncategorized", style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                split.category?.name ?: "Uncategorized",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             Text(formatEgp(split.transaction.amountMinor), style = MaterialTheme.typography.bodyMedium)
                         }
                         split.transaction.note?.let { note ->
-                            Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 } else {
-                    transaction.merchant?.let { Text(text = it, style = MaterialTheme.typography.bodyMedium) }
+                    transaction.merchant?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
             Text(
@@ -196,7 +210,12 @@ private fun TransactionRow(item: TransactionDisplay, onAddToItems: (Long) -> Uni
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (!isIncome && transaction.purchaseGroupId == null) {
-                TextButton(onClick = { onAddToItems(transaction.id) }) { Text("Add to My Items") }
+                TextButton(
+                    onClick = { onAddToItems(transaction.id) },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text("Add to My Items")
+                }
             }
         }
     }

@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,9 +51,9 @@ fun AnalyticsScreen(viewModel: AnalyticsViewModel = viewModel()) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Text("Analytics", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        ScreenHeader(title = "Analytics")
         PeriodSelector(uiState.selectedPeriod, viewModel::selectPeriod)
         AnalyticsSummary(uiState)
         if (uiState.totalSpentMinor == 0L) {
@@ -110,11 +111,17 @@ private fun AnalyticsSummary(state: AnalyticsUiState) {
 @Composable
 private fun SummaryRow(label: String, value: String, emphasized: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge)
+        Text(
+            label,
+            style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Text(
             value,
             style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
         )
     }
 }
@@ -124,7 +131,7 @@ private fun CategoryAnalysis(categories: List<AnalyticsCategoryUi>) {
     val colors = chartColors()
     val total = categories.fold(0L) { sum, item -> sum + item.amountMinor }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Category spending", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        SectionHeader(title = "Category spending")
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -176,9 +183,15 @@ private fun CategoryLegendRow(category: AnalyticsCategoryUi, color: Color) {
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(modifier = Modifier.size(10.dp).background(color, CircleShape))
-        Text(category.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            category.name,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Column(horizontalAlignment = Alignment.End) {
-            Text(formatEgp(category.amountMinor), fontWeight = FontWeight.Medium)
+            Text(formatEgp(category.amountMinor), fontWeight = FontWeight.Medium, maxLines = 1)
             Text(
                 formatAnalyticsPercentage(category.percentageTenths),
                 style = MaterialTheme.typography.bodySmall,
@@ -194,7 +207,7 @@ private fun SpendingTrend(points: List<TrendPointUi>, daily: Boolean) {
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val maxAmount = points.maxOfOrNull { it.amountMinor } ?: 0L
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Spending trend", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        SectionHeader(title = "Spending trend")
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -254,7 +267,7 @@ private fun TrendLabels(points: List<TrendPointUi>, daily: Boolean) {
 @Composable
 private fun TopCategories(categories: List<AnalyticsCategoryUi>) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Top Categories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        SectionHeader(title = "Top Categories")
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (categories.isEmpty()) {
@@ -262,8 +275,13 @@ private fun TopCategories(categories: List<AnalyticsCategoryUi>) {
                 } else {
                     categories.forEachIndexed { index, category ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("${index + 1}. ${category.name}", modifier = Modifier.weight(1f))
-                            Text(formatEgp(category.amountMinor), fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "${index + 1}. ${category.name}",
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(formatEgp(category.amountMinor), fontWeight = FontWeight.SemiBold, maxLines = 1)
                         }
                     }
                 }

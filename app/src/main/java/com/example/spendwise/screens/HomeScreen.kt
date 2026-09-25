@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,21 +14,26 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.spendwise.data.formatEgp
+import com.example.spendwise.viewmodel.AssetsUiState
 import com.example.spendwise.viewmodel.CategorySpendingUi
 import com.example.spendwise.viewmodel.HomeUiState
 import com.example.spendwise.viewmodel.HomeViewModel
 import com.example.spendwise.viewmodel.CommitmentsViewModel
 import com.example.spendwise.viewmodel.AssetsViewModel
+import com.example.spendwise.viewmodel.CommitmentsUiState
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun HomeScreen(
@@ -48,22 +54,12 @@ fun HomeScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "SpendWise",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = uiState.monthLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        ScreenHeader(
+            title = "SpendWise",
+            subtitle = uiState.monthLabel
+        )
 
         SummaryCard(uiState)
         UpcomingCommitmentsCard(commitments, onCommitments)
@@ -75,20 +71,20 @@ fun HomeScreen(
 }
 
 @Composable
-private fun AssetsAttentionCard(state: com.example.spendwise.viewmodel.AssetsUiState, onAssets: () -> Unit) {
+private fun AssetsAttentionCard(state: AssetsUiState, onAssets: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("My Items", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("${state.attentionCount} thing${if (state.attentionCount == 1) "" else "s"} need attention")
-            state.topAttention.forEach { Text("${it.assetName}: ${it.item.message}") }
-            TextButton(onClick = onAssets) { Text("View items") }
+            state.topAttention.forEach { Text("${it.assetName}: ${it.item.message}", maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            TextButton(onClick = onAssets, modifier = Modifier.heightIn(min = 48.dp)) { Text("View items") }
         }
     }
 }
 
 @Composable
 private fun UpcomingCommitmentsCard(
-    state: com.example.spendwise.viewmodel.CommitmentsUiState,
+    state: CommitmentsUiState,
     onCommitments: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -97,12 +93,12 @@ private fun UpcomingCommitmentsCard(
             val next = state.summary.nextOccurrence
             if (next == null) {
                 Text("No upcoming commitments yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onCommitments) { Text("Add commitment") }
+                TextButton(onClick = onCommitments, modifier = Modifier.heightIn(min = 48.dp)) { Text("Add commitment") }
             } else {
                 SummaryLine("Next 30 days", formatEgp(state.summary.next30DaysMinor))
-                Text(next.commitment.commitment.title, fontWeight = FontWeight.SemiBold)
-                Text("${formatEgp(next.amountMinor)} · ${next.dueDate.format(java.time.format.DateTimeFormatter.ofPattern("d MMM"))}")
-                TextButton(onClick = onCommitments) { Text("View commitments") }
+                Text(next.commitment.commitment.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${formatEgp(next.amountMinor)} · ${next.dueDate.format(DateTimeFormatter.ofPattern("d MMM"))}")
+                TextButton(onClick = onCommitments, modifier = Modifier.heightIn(min = 48.dp)) { Text("View commitments") }
             }
         }
     }
@@ -155,24 +151,23 @@ private fun SummaryLine(label: String, amount: String, emphasized: Boolean = fal
     ) {
         Text(
             text = label,
-            style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge
+            style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         Text(
             text = amount,
             style = if (emphasized) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
         )
     }
 }
 
 @Composable
 private fun SpendingBreakdown(categories: List<CategorySpendingUi>) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            text = "Where did your money go?",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(title = "Where did your money go?")
         Card(modifier = Modifier.fillMaxWidth()) {
             if (categories.isEmpty()) {
                 Text(
@@ -184,7 +179,7 @@ private fun SpendingBreakdown(categories: List<CategorySpendingUi>) {
             } else {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     categories.forEach { category ->
                         CategorySpendingRow(category)
@@ -205,12 +200,15 @@ private fun CategorySpendingRow(category: CategorySpendingUi) {
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = formatEgp(category.amountMinor),
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
             )
         }
         Text(
@@ -251,15 +249,17 @@ private fun QuickActions(
     onAddIncome: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Quick actions",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold
-        )
-        Button(onClick = onAddExpense, modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(title = "Quick actions")
+        Button(
+            onClick = onAddExpense,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        ) {
             Text("Add Expense")
         }
-        TextButton(onClick = onAddIncome, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = onAddIncome,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        ) {
             Text("Add Income")
         }
     }

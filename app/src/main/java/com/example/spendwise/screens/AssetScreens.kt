@@ -56,15 +56,18 @@ fun MyAssetsScreen(onAdd: () -> Unit, onOpen: (Long) -> Unit, viewModel: AssetsV
             else -> true
         }
     }.filter { itemMatchesSearch(it.asset, itemTypeLabel(it.asset.type, it.asset.customTypeId, customTypes), search) }
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Column(Modifier.fillMaxWidth().padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text("My Items", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    Button(onClick = onAdd) { Text("Add Item", maxLines = 1, softWrap = false) }
+            ScreenHeader(
+                title = "My Items",
+                subtitle = "Things you own and need to look after",
+                subtitleMaxLines = 2,
+                action = {
+                    Button(onClick = onAdd, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text("Add Item", maxLines = 1, softWrap = false)
+                    }
                 }
-                Text("Things you own and need to look after", modifier = Modifier.fillMaxWidth())
-            }
+            )
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -82,25 +85,54 @@ fun MyAssetsScreen(onAdd: () -> Unit, onOpen: (Long) -> Unit, viewModel: AssetsV
             }
         }
         if (cards.isEmpty()) item {
-            Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(if (search.isNotBlank()) "No matching items" else if (showHistory) "No ownership history yet" else "No items yet", fontWeight = FontWeight.SemiBold)
-                if (search.isBlank()) Text(if (showHistory) "Items you sell, give away, lose or dispose of will appear here."
-                    else "Add things you own to keep purchase info, documents, warranties and maintenance in one place.")
-                if (!showHistory && search.isBlank()) TextButton(onClick = onAdd) { Text("Add your first item") }
-            } }
+            val (emptyTitle, emptySub) = if (search.isNotBlank()) "No matching items" to "Try searching for a different item name or type."
+                else if (showHistory) "No ownership history yet" to "Items you sell, give away, lose or dispose of will appear here."
+                else "No items yet" to "Add things you own to keep purchase info, documents, warranties and maintenance in one place."
+            EmptyStateContainer(
+                title = emptyTitle,
+                subtitle = emptySub,
+                action = if (!showHistory && search.isBlank()) {
+                    { Button(onClick = onAdd, modifier = Modifier.heightIn(min = 48.dp)) { Text("Add your first item") } }
+                } else null
+            )
         }
         items(cards, key = { it.asset.id }) { card ->
             Card(Modifier.fillMaxWidth().clickable { onOpen(card.asset.id) }) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(card.asset.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(itemTypeLabel(card.asset.type, card.asset.customTypeId, customTypes) +
-                        (categoryNames[card.asset.categoryId]?.let { " · $it" } ?: ""), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (showHistory) Text(card.asset.ownershipStatus.displayLabel() +
-                        (card.latestOwnershipEvent?.takeIf { it.status == card.asset.ownershipStatus }?.let { " · ${LocalDate.ofEpochDay(it.effectiveDateEpochDay).format(assetDateFormatter)}" } ?: ""))
-                    else card.asset.purchaseDateEpochDay?.let { Text("Bought ${LocalDate.ofEpochDay(it).format(assetDateFormatter)}") }
-                    listOfNotNull(card.asset.brand, card.asset.model).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" ")) }
-                    card.attention?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold) }
-                    card.secondary?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        card.asset.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        itemTypeLabel(card.asset.type, card.asset.customTypeId, customTypes) +
+                            (categoryNames[card.asset.categoryId]?.let { " · $it" } ?: ""),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (showHistory) {
+                        Text(
+                            card.asset.ownershipStatus.displayLabel() +
+                                (card.latestOwnershipEvent?.takeIf { it.status == card.asset.ownershipStatus }?.let { " · ${LocalDate.ofEpochDay(it.effectiveDateEpochDay).format(assetDateFormatter)}" } ?: ""),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else card.asset.purchaseDateEpochDay?.let {
+                        Text(
+                            "Bought ${LocalDate.ofEpochDay(it).format(assetDateFormatter)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    listOfNotNull(card.asset.brand, card.asset.model).takeIf { it.isNotEmpty() }?.let {
+                        Text(it.joinToString(" "), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    card.attention?.let { Text(it, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall) }
+                    card.secondary?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
                 }
             }
         }
